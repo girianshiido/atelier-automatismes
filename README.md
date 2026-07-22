@@ -22,6 +22,8 @@ Les questions sont générées à partir de modèles paramétriques. Un historiq
 
 Ouvrir `index.html` dans un navigateur ou servir le dossier avec un serveur statique. Aucune compilation et aucune dépendance ne sont nécessaires.
 
+Le jeu peut être installé sur l'écran d'accueil : via le menu du navigateur sur Android, ou avec **Partager → Sur l'écran d'accueil** dans Safari sur iPhone. Une icône dédiée et un mode autonome sont déclarés dans le manifeste web.
+
 ## Boucle de jeu
 
 - Le noyau central produit du flux à chaque clic.
@@ -37,4 +39,5 @@ Ouvrir `index.html` dans un navigateur ou servir le dossier avec un serveur stat
 ```sh
 node tests/smoke.mjs
 node tests/economy.mjs
+node tests/static.mjs
 ```

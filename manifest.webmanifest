@@ -1,0 +1,27 @@
+{
+  "name": "NEXUS 1re — Automatismes STI2D",
+  "short_name": "NEXUS 1re",
+  "description": "Jeu incrémental d'automatismes pour la première STI2D.",
+  "lang": "fr",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#061521",
+  "theme_color": "#061521",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
