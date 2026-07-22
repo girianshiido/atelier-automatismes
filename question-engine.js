@@ -53,6 +53,32 @@
     return { choices, answer: choices.indexOf(String(correct)) };
   }
 
+  function fingerprint(question) {
+    return [
+      question.kind,
+      question.prompt,
+      question.visual || "",
+      question.choices.slice().sort().join("|")
+    ].join("§");
+  }
+
+  function affineExpression(a, b) {
+    if (b === 0) return `${a}x`;
+    return `${a}x ${b > 0 ? "+" : "−"} ${Math.abs(b)}`;
+  }
+
+  function polynomialExpression(a, b, c) {
+    const terms = [`${a}x²`];
+    if (b !== 0) terms.push(`${b > 0 ? "+" : "−"} ${Math.abs(b)}x`);
+    if (c !== 0) terms.push(`${c > 0 ? "+" : "−"} ${Math.abs(c)}`);
+    return terms.join(" ");
+  }
+
+  function linearFactor(constant) {
+    if (constant === 0) return "x";
+    return `(x ${constant > 0 ? "+" : "−"} ${Math.abs(constant)})`;
+  }
+
   function percentFinal(rng) {
     const initial = pick([80, 100, 120, 160, 200, 240, 320, 400, 500], rng);
     const rate = pick([-25, -20, -10, 5, 10, 15, 20, 25], rng);
@@ -63,6 +89,7 @@
       formatNumber(final + initial * 0.1)
     ], rng);
     return {
+      kind: "percent-final",
       skill: "evolutions",
       prompt: `Une batterie stocke ${initial} Wh. Sa capacité ${rate >= 0 ? "augmente" : "diminue"} de ${Math.abs(rate)} %. Quelle est sa nouvelle capacité ?`,
       choices: choices.map(v => `${v} Wh`), answer,
@@ -81,6 +108,7 @@
       `${rate < 0 ? "+" : "−"}${Math.abs(rate)} %`
     ], rng);
     return {
+      kind: "percent-rate",
       skill: "evolutions",
       prompt: `Une production passe de ${start} à ${formatNumber(end)} unités. Quel est son taux d'évolution ?`,
       choices, answer,
@@ -100,6 +128,7 @@
       `${total < 0 ? "+" : "−"}${formatNumber(Math.abs(total), 1)} %`
     ], rng);
     return {
+      kind: "successive-rates",
       skill: "evolutions",
       prompt: `Une valeur évolue de ${r1 >= 0 ? "+" : "−"}${Math.abs(r1)} %, puis de ${r2 >= 0 ? "+" : "−"}${Math.abs(r2)} %. Quelle est l'évolution globale ?`,
       choices, answer,
@@ -115,15 +144,16 @@
     const root2 = -b;
     const ordered = [root1, root2].sort((x, y) => x - y);
     const good = `x = ${ordered[0]} ou x = ${ordered[1]}`;
-    const form = n => n >= 0 ? `+ ${n}` : `− ${Math.abs(n)}`;
+    const factors = [a, b].sort((x, y) => Number(x !== 0) - Number(y !== 0)).map(linearFactor);
     const { choices, answer } = makeChoices(good, [
       `x = ${a} ou x = ${b}`,
       `x = ${root1 + 1} ou x = ${root2 + 1}`,
       `x = ${root1 * root2}`
     ], rng);
     return {
+      kind: "zero-product",
       skill: "algebra",
-      prompt: `Résoudre (${`x ${form(a)}`})(${`x ${form(b)}`}) = 0.`,
+      prompt: `Résoudre ${factors.join("")} = 0.`,
       choices, answer,
       explanation: `Un produit est nul si l'un de ses facteurs est nul : les solutions sont ${good}.`
     };
@@ -142,6 +172,7 @@
       `${xcoef + a}x + ${constant}`
     ], rng);
     return {
+      kind: "develop-expression",
       skill: "algebra",
       prompt: `Développer et réduire : ${k}(x + ${a}) + ${m}x.`,
       choices, answer,
@@ -158,6 +189,7 @@
     const y2 = y1 + slope * dx;
     const { choices, answer } = makeChoices(formatNumber(slope), [formatNumber(-slope), formatNumber(slope + 1), formatNumber(dx / (y2 - y1))], rng);
     return {
+      kind: "line-slope",
       skill: "functions",
       prompt: `Une droite passe par A(${x1} ; ${y1}) et B(${x2} ; ${y2}). Quel est son coefficient directeur ?`,
       choices, answer,
@@ -170,13 +202,14 @@
     const b = randInt(-6, 6, rng);
     const x = randInt(-4, 5, rng);
     const value = a * x + b;
-    const sign = b >= 0 ? `+ ${b}` : `− ${Math.abs(b)}`;
+    const expression = affineExpression(a, b);
     const { choices, answer } = makeChoices(value, [a + x + b, a * x - b, value + a], rng);
     return {
+      kind: "affine-image",
       skill: "functions",
-      prompt: `Soit f(x) = ${a}x ${sign}. Quelle est l'image de ${x} par f ?`,
+      prompt: `Soit f(x) = ${expression}. Quelle est l'image de ${x} par f ?`,
       choices, answer,
-      explanation: `f(${x}) = ${a} × (${x}) ${sign} = ${value}.`
+      explanation: `f(${x}) = ${a} × (${x})${b === 0 ? "" : ` ${b > 0 ? "+" : "−"} ${Math.abs(b)}`} = ${value}.`
     };
   }
 
@@ -188,29 +221,28 @@
       const values = [u0, u0 * q, u0 * q ** 2, u0 * q ** 3];
       const good = u0 * q ** 4;
       const { choices, answer } = makeChoices(good, [good + q, values[3] + q, values[3] * (q + 1)], rng);
-      return { skill: "sequences", prompt: `Compléter la suite géométrique : ${values.join(" ; ")} ; …`, choices, answer, explanation: `Chaque terme est multiplié par ${q}. Le terme suivant vaut ${values[3]} × ${q} = ${good}.` };
+      return { kind: "geometric-sequence", skill: "sequences", prompt: `Compléter la suite géométrique : ${values.join(" ; ")} ; …`, choices, answer, explanation: `Chaque terme est multiplié par ${q}. Le terme suivant vaut ${values[3]} × ${q} = ${good}.` };
     }
     const r = pick([-5, -3, 2, 4, 6, 8], rng);
     const u0 = randInt(-4, 12, rng);
     const values = [u0, u0 + r, u0 + 2 * r, u0 + 3 * r];
     const good = u0 + 4 * r;
     const { choices, answer } = makeChoices(good, [good + r, values[3] * r, good - 1], rng);
-    return { skill: "sequences", prompt: `Compléter la suite arithmétique : ${values.join(" ; ")} ; …`, choices, answer, explanation: `On ajoute ${r} à chaque terme. Le terme suivant vaut ${values[3]} ${r >= 0 ? "+" : "−"} ${Math.abs(r)} = ${good}.` };
+    return { kind: "arithmetic-sequence", skill: "sequences", prompt: `Compléter la suite arithmétique : ${values.join(" ; ")} ; …`, choices, answer, explanation: `On ajoute ${r} à chaque terme. Le terme suivant vaut ${values[3]} ${r >= 0 ? "+" : "−"} ${Math.abs(r)} = ${good}.` };
   }
 
   function derivativePolynomial(rng) {
     const a = pick([-4, -3, -2, 2, 3, 4], rng);
     const b = randInt(-6, 6, rng);
     const c = randInt(-8, 8, rng);
-    const bs = b >= 0 ? `+ ${b}x` : `− ${Math.abs(b)}x`;
-    const cs = c >= 0 ? `+ ${c}` : `− ${Math.abs(c)}`;
-    const good = `${2 * a}x ${b >= 0 ? "+" : "−"} ${Math.abs(b)}`;
+    const expression = polynomialExpression(a, b, c);
+    const good = affineExpression(2 * a, b);
     const { choices, answer } = makeChoices(good, [
-      `${a}x ${b >= 0 ? "+" : "−"} ${Math.abs(b)}`,
-      `${2 * a}x² ${b >= 0 ? "+" : "−"} ${Math.abs(b)}`,
-      `${2 * a}x ${c >= 0 ? "+" : "−"} ${Math.abs(c)}`
+      affineExpression(a, b),
+      polynomialExpression(2 * a, 0, b),
+      affineExpression(2 * a, c)
     ], rng);
-    return { skill: "derivatives", prompt: `Soit f(x) = ${a}x² ${bs} ${cs}. Quelle est sa fonction dérivée ?`, choices, answer, explanation: `La dérivée de ax² + bx + c est 2ax + b. Donc f′(x) = ${good}.` };
+    return { kind: "polynomial-derivative", skill: "derivatives", prompt: `Soit f(x) = ${expression}. Quelle est sa fonction dérivée ?`, choices, answer, explanation: `La dérivée de ax² + bx + c est 2ax + b. Donc f′(x) = ${good}.` };
   }
 
   function meanSeries(rng) {
@@ -218,7 +250,7 @@
     const sum = values.reduce((a, b) => a + b, 0);
     const mean = sum / values.length;
     const { choices, answer } = makeChoices(formatNumber(mean), [formatNumber(sum / 5), formatNumber(mean + 1), formatNumber(values.sort((a,b)=>a-b)[1])], rng);
-    return { skill: "statistics", prompt: `Quelle est la moyenne de la série : ${values.join(" ; ")} ?`, choices, answer, explanation: `La somme vaut ${sum}. La moyenne est ${sum} ÷ 4 = ${formatNumber(mean)}.` };
+    return { kind: "series-mean", skill: "statistics", prompt: `Quelle est la moyenne de la série : ${values.join(" ; ")} ?`, choices, answer, explanation: `La somme vaut ${sum}. La moyenne est ${sum} ÷ 4 = ${formatNumber(mean)}.` };
   }
 
   function conditionalProbability(rng) {
@@ -236,6 +268,7 @@
       `${formatNumber(aNo / totalA * 100, 1)} %`
     ], rng);
     return {
+      kind: "conditional-table",
       skill: "probability",
       prompt: `On choisit une pièce au hasard parmi les pièces de la ligne A. Quelle est la probabilité qu'elle soit conforme ?`,
       choices, answer,
@@ -249,7 +282,7 @@
     const pB = pick([0.2, 0.25, 0.4, 0.5, 0.6], rng);
     const good = pA * pB;
     const { choices, answer } = makeChoices(formatNumber(good, 2), [formatNumber(pA + pB, 2), formatNumber(1 - good, 2), formatNumber(pA / pB, 2)], rng);
-    return { skill: "probability", prompt: `Les événements A et B sont indépendants, avec P(A) = ${formatNumber(pA)} et P(B) = ${formatNumber(pB)}. Calculer P(A ∩ B).`, choices, answer, explanation: `Pour des événements indépendants, P(A ∩ B) = P(A) × P(B) = ${formatNumber(pA)} × ${formatNumber(pB)} = ${formatNumber(good, 2)}.` };
+    return { kind: "independent-events", skill: "probability", prompt: `Les événements A et B sont indépendants, avec P(A) = ${formatNumber(pA)} et P(B) = ${formatNumber(pB)}. Calculer P(A ∩ B).`, choices, answer, explanation: `Pour des événements indépendants, P(A ∩ B) = P(A) × P(B) = ${formatNumber(pA)} × ${formatNumber(pB)} = ${formatNumber(good, 2)}.` };
   }
 
   const GENERATORS = {
@@ -258,13 +291,26 @@
     data: [meanSeries, conditionalProbability, independentEvents]
   };
 
-  function generate(worldId, mastery = {}, rng = Math.random) {
+  function generate(worldId, mastery = {}, rng = Math.random, exclusions = {}) {
     const generators = GENERATORS[worldId] || GENERATORS.energy;
-    const generated = generators.map(generator => generator(rng));
-    const min = Math.min(...generated.map(q => Number(mastery[q.skill] || 0)));
-    const weak = generated.filter(q => Number(mastery[q.skill] || 0) <= min + 1);
-    return pick(rng() < 0.72 ? weak : generated, rng);
+    const excludedKeys = new Set(exclusions.keys || []);
+    const excludedKinds = new Set(exclusions.kinds || []);
+    const generated = generators.map(generator => {
+      let question;
+      let attempts = 0;
+      do {
+        question = generator(rng);
+        attempts += 1;
+      } while (excludedKeys.has(fingerprint(question)) && attempts < 20);
+      return question;
+    });
+    const newQuestions = generated.filter(question => !excludedKeys.has(fingerprint(question)));
+    const variedQuestions = newQuestions.filter(question => !excludedKinds.has(question.kind));
+    const candidates = variedQuestions.length ? variedQuestions : (newQuestions.length ? newQuestions : generated);
+    const min = Math.min(...candidates.map(q => Number(mastery[q.skill] || 0)));
+    const weak = candidates.filter(q => Number(mastery[q.skill] || 0) <= min + 1);
+    return pick(rng() < 0.72 ? weak : candidates, rng);
   }
 
-  return { SKILLS, GENERATORS, generate, formatNumber };
+  return { SKILLS, GENERATORS, generate, fingerprint, affineExpression, linearFactor, formatNumber };
 });

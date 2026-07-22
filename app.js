@@ -52,6 +52,8 @@
     upgrades: {},
     boostMultiplier: 1,
     boostUntil: 0,
+    recentQuestionKeys: {},
+    recentQuestionKinds: {},
     missionProgress: 0,
     missionTarget: 5,
     lastSeen: Date.now(),
@@ -84,6 +86,8 @@
       const merged = { ...defaultState(), ...saved };
       merged.mastery = { ...defaultState().mastery, ...(saved.mastery || {}) };
       merged.upgrades = saved.upgrades || {};
+      merged.recentQuestionKeys = saved.recentQuestionKeys || {};
+      merged.recentQuestionKinds = saved.recentQuestionKinds || {};
       const elapsed = Math.min(7200, Math.max(0, (Date.now() - Number(saved.lastSeen || Date.now())) / 1000));
       const offlineRate = calculateProduction(merged, false);
       const offlineGain = elapsed * offlineRate;
@@ -251,7 +255,23 @@
 
   function startQuestion() {
     clearTimeout(nextQuestionTimer);
-    currentQuestion = Engine.generate(state.currentWorld, state.mastery);
+    const worldId = state.currentWorld;
+    const recentKeys = state.recentQuestionKeys[worldId] || [];
+    const recentKinds = state.recentQuestionKinds[worldId] || [];
+    let questionKey = "";
+    let attempts = 0;
+    do {
+      currentQuestion = Engine.generate(worldId, state.mastery, Math.random, {
+        keys: recentKeys,
+        kinds: recentKinds.slice(-2)
+      });
+      questionKey = Engine.fingerprint(currentQuestion);
+      attempts += 1;
+    } while (recentKeys.includes(questionKey) && attempts < 20);
+
+    state.recentQuestionKeys[worldId] = [...recentKeys, questionKey].slice(-12);
+    state.recentQuestionKinds[worldId] = [...recentKinds, currentQuestion.kind].slice(-2);
+    saveState();
     questionStartedAt = performance.now();
     refs.skillChip.textContent = Engine.SKILLS[currentQuestion.skill];
     refs.questionText.textContent = currentQuestion.prompt;
