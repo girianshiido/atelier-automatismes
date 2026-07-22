@@ -29,6 +29,21 @@ const productRandomValues = [0.86, 0.5];
 const productWithZero = engine.GENERATORS.factory[0](() => productRandomValues.shift() ?? 0.5);
 assert.match(productWithZero.prompt, /Résoudre x\(x \+ 5\) = 0\./, "le facteur x + 0 doit être écrit x et placé en premier");
 
+let randomSeed = 123456789;
+const seededRandom = () => {
+  randomSeed = (1664525 * randomSeed + 1013904223) >>> 0;
+  return randomSeed / 2 ** 32;
+};
+const conditionalVariants = new Set();
+for (let i = 0; i < 500; i += 1) {
+  const question = engine.GENERATORS.data[1](seededRandom);
+  const byLine = question.prompt.match(/parmi les pièces de la ligne ([AB]).*soit (conforme|non conforme)/);
+  const byStatus = question.prompt.match(/parmi les pièces (conformes|non conformes).*ligne ([AB])/);
+  if (byLine) conditionalVariants.add(`ligne-${byLine[1]}-${byLine[2]}`);
+  if (byStatus) conditionalVariants.add(`statut-${byStatus[1]}-${byStatus[2]}`);
+}
+assert.equal(conditionalVariants.size, 8, "les huit formulations du tableau conditionnel doivent être générées");
+
 for (const world of worlds) {
   const recentKeys = [];
   const recentKinds = [];

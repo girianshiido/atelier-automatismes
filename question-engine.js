@@ -258,22 +258,45 @@
     const aNo = randInt(6, 18, rng);
     const bYes = randInt(8, 22, rng);
     const bNo = randInt(10, 25, rng);
-    const totalA = aYes + aNo;
-    const probability = aYes / totalA;
+    const values = [[aYes, aNo], [bYes, bNo]];
+    const rowTotals = [aYes + aNo, bYes + bNo];
+    const columnTotals = [aYes + bYes, aNo + bNo];
+    const total = rowTotals[0] + rowTotals[1];
+    const conditionByLine = rng() < 0.5;
+    const rowIndex = randInt(0, 1, rng);
+    const statusIndex = randInt(0, 1, rng);
+    const numerator = values[rowIndex][statusIndex];
+    const denominator = conditionByLine ? rowTotals[rowIndex] : columnTotals[statusIndex];
+    const probability = numerator / denominator;
     const percent = Math.round(probability * 1000) / 10;
-    const total = totalA + bYes + bNo;
+    const line = rowIndex === 0 ? "A" : "B";
+    const status = statusIndex === 0 ? "conforme" : "non conforme";
+    const statusPlural = statusIndex === 0 ? "conformes" : "non conformes";
+    const otherNumerator = conditionByLine
+      ? values[rowIndex][1 - statusIndex]
+      : values[1 - rowIndex][statusIndex];
+    const alternateDenominator = conditionByLine ? columnTotals[statusIndex] : rowTotals[rowIndex];
     const { choices, answer } = makeChoices(`${formatNumber(percent, 1)} %`, [
-      `${formatNumber(aYes / total * 100, 1)} %`,
-      `${formatNumber(aYes / (aYes + bYes) * 100, 1)} %`,
-      `${formatNumber(aNo / totalA * 100, 1)} %`
+      `${formatNumber(numerator / total * 100, 1)} %`,
+      `${formatNumber(numerator / alternateDenominator * 100, 1)} %`,
+      `${formatNumber(otherNumerator / denominator * 100, 1)} %`
     ], rng);
+    const prompt = conditionByLine
+      ? `On choisit une pièce au hasard parmi les pièces de la ligne ${line}. Quelle est la probabilité qu'elle soit ${status} ?`
+      : `On choisit une pièce au hasard parmi les pièces ${statusPlural}. Quelle est la probabilité qu'elle provienne de la ligne ${line} ?`;
+    const conditionDescription = conditionByLine
+      ? `les ${denominator} pièces de la ligne ${line}`
+      : `les ${denominator} pièces ${statusPlural}`;
+    const targetDescription = conditionByLine
+      ? `${numerator} sont ${statusPlural}`
+      : `${numerator} proviennent de la ligne ${line}`;
     return {
       kind: "conditional-table",
       skill: "probability",
-      prompt: `On choisit une pièce au hasard parmi les pièces de la ligne A. Quelle est la probabilité qu'elle soit conforme ?`,
+      prompt,
       choices, answer,
       visual: `<table aria-label="Tableau des pièces contrôlées"><tr><th></th><th>Conformes</th><th>Non conformes</th></tr><tr><th>Ligne A</th><td>${aYes}</td><td>${aNo}</td></tr><tr><th>Ligne B</th><td>${bYes}</td><td>${bNo}</td></tr></table>`,
-      explanation: `Parmi les ${totalA} pièces de la ligne A, ${aYes} sont conformes : ${aYes} ÷ ${totalA} ≈ ${formatNumber(percent, 1)} %.`
+      explanation: `Parmi ${conditionDescription}, ${targetDescription} : ${numerator} ÷ ${denominator} ≈ ${formatNumber(percent, 1)} %.`
     };
   }
 
