@@ -144,17 +144,17 @@
     const baseMetres = pick([0.5, 1, 1.2, 2.5, 5, 12, 25, 50], rng);
     const given = baseMetres / from.factor;
     const good = baseMetres / to.factor;
-    const { choices, answer } = makeChoices(formatNumber(good, 3), [
-      formatNumber(good * 10, 3),
-      formatNumber(good / 10, 3),
-      formatNumber(given, 3)
+    const { choices, answer } = makeChoices(formatNumber(good, 6), [
+      formatNumber(good * 10, 6),
+      formatNumber(good / 10, 6),
+      formatNumber(given, 6)
     ], rng);
     return {
       kind: "metric-conversion",
       skill: "units",
-      prompt: `Convertir ${formatNumber(given, 3)} ${from.name} en ${to.name}.`,
+      prompt: `Convertir ${formatNumber(given, 6)} ${from.name} en ${to.name}.`,
       choices: choices.map(value => `${value} ${to.name}`), answer,
-      explanation: `${formatNumber(given, 3)} ${from.name} correspondent à ${formatNumber(baseMetres, 3)} m, donc à ${formatNumber(good, 3)} ${to.name}.`
+      explanation: `${formatNumber(given, 6)} ${from.name} correspondent à ${formatNumber(baseMetres, 6)} m, donc à ${formatNumber(good, 6)} ${to.name}.`
     };
   }
 

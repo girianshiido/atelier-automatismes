@@ -29,6 +29,11 @@ const productRandomValues = [0.86, 0.5];
 const productWithZero = engine.GENERATORS.factory[0](() => productRandomValues.shift() ?? 0.5);
 assert.match(productWithZero.prompt, /Résoudre x\(x \+ 5\) = 0\./, "le facteur x + 0 doit être écrit x et placé en premier");
 
+const conversionRandomValues = [0.9, 0.3, 0, 0.5, 0.5, 0.5];
+const preciseConversion = engine.SKILL_GENERATORS.units[0](() => conversionRandomValues.shift() ?? 0.5);
+assert.equal(preciseConversion.prompt, "Convertir 0,0005 km en cm.", "une petite mesure ne doit pas être arrondie dans l'énoncé");
+assert.equal(preciseConversion.choices[preciseConversion.answer], "50 cm", "0,0005 km doit correspondre à 50 cm");
+
 let randomSeed = 123456789;
 const seededRandom = () => {
   randomSeed = (1664525 * randomSeed + 1013904223) >>> 0;
