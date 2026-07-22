@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#07131e">
+    <meta name="theme-color" content="#061521">
     <meta name="description" content="Jeu incrémental d'automatismes pour la classe de première STI2D.">
     <title>NEXUS 1re — Automatismes STI2D</title>
-    <link rel="stylesheet" href="styles.css?v=1">
+    <link rel="stylesheet" href="styles.css?v=4">
   </head>
   <body>
     <div class="ambient ambient-a"></div>
@@ -15,122 +15,179 @@
     <header class="topbar">
       <a class="brand" href="#jeu" aria-label="NEXUS 1re, accueil">
         <span class="brand-mark" aria-hidden="true">N</span>
-        <span><strong>NEXUS 1re</strong><small>Automatismes STI2D</small></span>
+        <span><strong>NEXUS 1re</strong><small>Laboratoire d'automatismes STI2D</small></span>
       </a>
-
       <div class="top-stats" aria-label="Statistiques de la partie">
-        <div class="stat"><span>Flux</span><strong id="flux-value">0</strong></div>
+        <div class="stat main-stat"><span>Flux disponible</span><strong id="flux-value">0</strong></div>
         <div class="stat"><span>Production</span><strong id="production-value">0/s</strong></div>
-        <div class="stat"><span>Maîtrise</span><strong id="mastery-value">0</strong></div>
-        <div class="stat streak-stat"><span>Série</span><strong id="streak-value">0</strong></div>
+        <div class="stat"><span>Étalonnage</span><strong id="calibration-value">0 pt</strong></div>
+        <div class="stat"><span>Cycle</span><strong id="cycle-value">1</strong></div>
       </div>
-
       <button class="icon-button" id="help-button" type="button" aria-label="Ouvrir l'aide">?</button>
     </header>
 
     <main id="jeu" class="game-shell">
-      <aside class="world-panel panel">
+      <aside class="progress-panel panel">
         <div class="panel-heading">
           <p class="eyebrow">Réseau pédagogique</p>
-          <h2>Les mondes</h2>
+          <h2>Cycle d'étalonnage</h2>
         </div>
-        <nav id="world-list" class="world-list" aria-label="Choisir un monde"></nav>
-        <div class="cycle-card">
-          <div>
-            <span>Cycle <b id="cycle-value">1</b></span>
-            <strong><b id="patent-value">0</b> brevet</strong>
-          </div>
-          <p>Chaque brevet augmente définitivement la production de 10 %.</p>
-          <button id="cycle-button" class="small-button" type="button" disabled>Nouveau cycle</button>
+        <div class="cycle-visual" aria-hidden="true"><span id="cycle-ring">1</span></div>
+        <p class="cycle-copy">Reconfigure le laboratoire pour gagner des points permanents, sans perdre ta maîtrise mathématique.</p>
+        <div class="cycle-progress-label"><span>Flux du cycle</span><b id="cycle-progress-text">0 / 50 k</b></div>
+        <div class="progress-track"><span id="cycle-progress-bar"></span></div>
+        <div class="cycle-reward">
+          <small>Récompense actuelle</small>
+          <strong id="cycle-gain">0 point</strong>
+          <span id="permanent-multiplier">Production permanente ×1</span>
+        </div>
+        <button id="cycle-button" class="secondary-button full-button" type="button" disabled>Étalonner le réseau</button>
+
+        <div class="mastery-summary">
+          <div><p class="eyebrow">Acquis conservés</p><b id="mastery-total">0</b></div>
+          <p>Chaque bonne réponse renforce l'atelier concerné.</p>
         </div>
       </aside>
 
-      <section class="challenge-panel panel" aria-labelledby="challenge-title">
-        <div class="challenge-head">
+      <section class="core-panel panel" aria-labelledby="core-title">
+        <div class="core-heading">
           <div>
-            <p class="eyebrow" id="world-kicker">Monde 01 · Réseau solaire</p>
-            <h1 id="challenge-title">Active le réseau</h1>
+            <p class="eyebrow">Production manuelle</p>
+            <h1 id="core-title">Noyau de flux</h1>
           </div>
-          <div id="boost-pill" class="boost-pill" aria-live="polite">
-            <span class="boost-dot"></span>
-            <span>Élan ×1</span>
-          </div>
+          <div id="boost-pill" class="boost-pill" aria-live="polite"><span></span>Régime normal</div>
         </div>
 
-        <div id="question-card" class="question-card">
-          <div class="question-meta">
-            <span id="skill-chip" class="skill-chip">Évolutions</span>
-            <span id="timer-label">Prêt</span>
-          </div>
-          <div class="timer-track" aria-hidden="true"><span id="timer-bar"></span></div>
-          <div id="question-visual" class="question-visual" hidden></div>
-          <p id="question-text" class="question-text">Une réponse juste alimente le réseau. Une réponse rapide déclenche un multiplicateur temporaire.</p>
-          <div id="answers" class="answers"></div>
-          <button id="start-button" class="primary-button" type="button">Lancer le premier défi</button>
-          <div id="feedback" class="feedback" aria-live="polite" hidden></div>
+        <div class="core-stage">
+          <div class="orbit orbit-one"></div>
+          <div class="orbit orbit-two"></div>
+          <button id="core-button" class="core-button" type="button" aria-label="Activer le noyau de flux">
+            <span class="core-glow"></span>
+            <span class="core-symbol">N</span>
+            <span class="core-action">ACTIVER</span>
+          </button>
+          <div id="float-layer" class="float-layer" aria-hidden="true"></div>
         </div>
 
-        <div class="mission-strip">
-          <div class="mission-copy">
-            <span class="mission-icon" aria-hidden="true">◎</span>
-            <div><small>Mission active</small><strong id="mission-title">Réussir 5 défis</strong></div>
-          </div>
-          <div class="mission-progress"><span id="mission-bar"></span></div>
-          <b id="mission-count">0/5</b>
+        <div class="click-readout">
+          <strong id="click-gain">+1 flux par clic</strong>
+          <span id="total-clicks">0 activation</span>
         </div>
+
+        <div class="cadence-card">
+          <div class="cadence-label">
+            <span><b id="cadence-title">Charge d'Hypercadence</b><small id="cadence-hint">40 clics pour accélérer le noyau</small></span>
+            <strong id="cadence-count">0 / 40</strong>
+          </div>
+          <div class="cadence-track"><span id="cadence-bar"></span></div>
+        </div>
+
+        <article id="event-card" class="event-card" hidden>
+          <div class="event-signal" aria-hidden="true">!</div>
+          <div>
+            <p class="eyebrow">Perturbation détectée</p>
+            <h2 id="event-title">Surcharge du réseau</h2>
+            <p id="event-description"></p>
+            <small id="event-reward"></small>
+          </div>
+          <button id="event-start" class="primary-button" type="button">Intervenir</button>
+        </article>
+        <div id="event-countdown" class="event-countdown">Première perturbation dans environ 25 s.</div>
       </section>
 
-      <aside class="factory-panel panel">
-        <div class="panel-heading factory-heading">
-          <div><p class="eyebrow">Production passive</p><h2>Installations</h2></div>
-          <span id="world-output" class="output-badge">0/s</span>
+      <aside class="status-panel panel">
+        <div class="panel-heading">
+          <p class="eyebrow">Tableau de contrôle</p>
+          <h2>État du laboratoire</h2>
         </div>
-        <div id="upgrade-list" class="upgrade-list"></div>
-        <div class="mastery-card">
-          <div class="mastery-card-head"><strong>Compétences du monde</strong><span id="world-mastery">0 pts</span></div>
-          <div id="skill-list" class="skill-list"></div>
+        <div class="status-grid">
+          <div><span>Ateliers</span><strong id="owned-total">0</strong></div>
+          <div><span>Réponses justes</span><strong id="correct-total">0</strong></div>
+          <div><span>Précision</span><strong id="accuracy-value">—</strong></div>
+          <div><span>Meilleure série</span><strong id="best-streak">0</strong></div>
         </div>
+        <div class="active-effect">
+          <span class="effect-icon" aria-hidden="true">⚡</span>
+          <div><small>Effet temporaire</small><strong id="active-effect">Aucun</strong></div>
+        </div>
+        <div class="unlocked-box">
+          <div class="unlocked-head"><strong>Notions actives</strong><span id="unlocked-count">0/9</span></div>
+          <div id="unlocked-skills" class="unlocked-skills"><span class="empty-chip">Achète un atelier</span></div>
+        </div>
+        <p class="status-note">Les perturbations utilisent uniquement les notions dont tu possèdes au moins un atelier.</p>
       </aside>
+
+      <section class="shop-panel panel" aria-labelledby="shop-title">
+        <div class="shop-heading">
+          <div>
+            <p class="eyebrow">Production passive</p>
+            <h2 id="shop-title">Ateliers mathématiques</h2>
+            <p>Chaque unité produit du flux. Les paliers 10, 25, 50… doublent la puissance de l'atelier.</p>
+          </div>
+          <div class="bulk-picker" aria-label="Quantité à acheter">
+            <button class="bulk-button active" data-bulk="1" type="button">×1</button>
+            <button class="bulk-button" data-bulk="10" type="button">×10</button>
+            <button class="bulk-button" data-bulk="max" type="button">MAX</button>
+          </div>
+        </div>
+        <div id="workshop-list" class="workshop-list"></div>
+      </section>
     </main>
 
     <section class="roadmap panel" aria-labelledby="roadmap-title">
-      <div class="roadmap-intro">
-        <p class="eyebrow">Progression sans fin</p>
-        <h2 id="roadmap-title">Le réseau se réorganise autour de tes acquis</h2>
-        <p>Les notions fragiles reviennent davantage. Les nombres et les formes changent à chaque défi : impossible d'apprendre les réponses par cœur.</p>
+      <div>
+        <p class="eyebrow">Boucle de progression</p>
+        <h2 id="roadmap-title">Produire, apprendre, recommencer plus vite</h2>
       </div>
       <div class="roadmap-items">
-        <article><span>01</span><div><strong>Répondre</strong><small>Gagner du flux et de la maîtrise</small></div></article>
-        <article><span>02</span><div><strong>Automatiser</strong><small>Répondre vite pour déclencher l'élan</small></div></article>
-        <article><span>03</span><div><strong>Construire</strong><small>Transformer le flux en production passive</small></div></article>
-        <article><span>∞</span><div><strong>Recommencer</strong><small>Obtenir des brevets sans perdre ses acquis</small></div></article>
+        <article><span>01</span><div><strong>Activer</strong><small>Cliquer et déclencher l'Hypercadence</small></div></article>
+        <article><span>02</span><div><strong>Construire</strong><small>Acheter des ateliers producteurs</small></div></article>
+        <article><span>03</span><div><strong>Intervenir</strong><small>Résoudre des perturbations occasionnelles</small></div></article>
+        <article><span>∞</span><div><strong>Étalonner</strong><small>Relancer avec un bonus permanent</small></div></article>
       </div>
     </section>
 
     <footer>
-      <span>Prototype pédagogique · Programme de première technologique, BO du 2 avril 2026</span>
+      <span>Programme de première technologique · BO du 2 avril 2026</span>
       <button id="reset-button" class="text-button" type="button">Réinitialiser la partie</button>
     </footer>
+
+    <dialog id="event-dialog">
+      <div class="dialog-card event-dialog-card">
+        <button id="event-close" class="dialog-close" type="button" aria-label="Fermer">×</button>
+        <div class="event-dialog-head">
+          <div><p class="eyebrow" id="event-kicker">Perturbation</p><h2 id="event-dialog-title">Intervention</h2></div>
+          <strong id="event-score">0/1</strong>
+        </div>
+        <div class="question-meta"><span id="skill-chip" class="skill-chip">Proportions</span><span id="timer-label">Réfléchis</span></div>
+        <div class="timer-track"><span id="timer-bar"></span></div>
+        <div id="question-visual" class="question-visual" hidden></div>
+        <p id="question-text" class="question-text"></p>
+        <div id="answers" class="answers"></div>
+        <div id="feedback" class="feedback" aria-live="polite" hidden></div>
+        <button id="event-next" class="primary-button full-button" type="button" hidden>Question suivante</button>
+      </div>
+    </dialog>
 
     <dialog id="help-dialog">
       <form method="dialog" class="dialog-card">
         <button class="dialog-close" value="close" aria-label="Fermer">×</button>
         <p class="eyebrow">Comment jouer</p>
-        <h2>Apprendre fait avancer le monde</h2>
+        <h2>Le laboratoire apprend avec toi</h2>
         <ol>
-          <li><b>Réponds juste</b> pour gagner du flux et un point de maîtrise.</li>
-          <li><b>Réponds en moins de 8 secondes</b> pour accélérer temporairement toute ta production.</li>
-          <li><b>Achète des installations</b> : elles produisent du flux même entre deux questions.</li>
-          <li><b>Débloque les mondes</b> avec tes réponses correctes, puis lance de nouveaux cycles.</li>
+          <li><b>Clique sur le noyau</b> pour produire tes premiers flux. Tous les 40 clics, l'Hypercadence renforce les clics et ajoute des impulsions automatiques pendant 10 secondes.</li>
+          <li><b>Achète des ateliers</b> : ils produisent continuellement et débloquent leur notion mathématique.</li>
+          <li><b>Interviens lors des perturbations</b>. Elles sont occasionnelles et choisissent des questions générées parmi les notions achetées.</li>
+          <li><b>Étalonne le réseau</b> lorsque la production ralentit : tu recommences avec un bonus permanent et conserves ta maîtrise.</li>
         </ol>
-        <p class="dialog-note">La rapidité donne seulement un bonus. Une réponse correcte rapporte toujours, même après réflexion.</p>
-        <button class="primary-button" value="close">J'ai compris</button>
+        <p class="dialog-note">Répondre vite améliore la récompense, mais une réponse juste reste toujours utile. Une erreur ne retire jamais de flux.</p>
+        <button class="primary-button full-button" value="close">J'ai compris</button>
       </form>
     </dialog>
 
     <dialog id="confirm-dialog">
       <form method="dialog" class="dialog-card compact-dialog">
-        <p class="eyebrow">Nouveau cycle</p>
+        <p class="eyebrow" id="confirm-kicker">Confirmation</p>
         <h2 id="confirm-title">Reconfigurer le réseau ?</h2>
         <p id="confirm-text"></p>
         <div class="dialog-actions">
@@ -140,7 +197,10 @@
       </form>
     </dialog>
 
-    <script src="question-engine.js?v=3"></script>
-    <script src="app.js?v=2"></script>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="question-engine.js?v=4"></script>
+    <script src="game-model.js?v=1"></script>
+    <script src="app.js?v=4"></script>
   </body>
 </html>

@@ -22,7 +22,7 @@ assert.equal(engine.linearFactor(0), "x", "le facteur x + 0 doit être simplifi�
 assert.equal(engine.linearFactor(5), "(x + 5)", "un facteur non nul doit rester entre parenthèses");
 
 const affineRandomValues = [0, 0.5, 0.5];
-const affineWithZero = engine.GENERATORS.energy[3](() => affineRandomValues.shift() ?? 0.5);
+const affineWithZero = engine.SKILL_GENERATORS.functions[1](() => affineRandomValues.shift() ?? 0.5);
 assert.match(affineWithZero.prompt, /f\(x\) = -4x\./, "la fonction affine ne doit pas afficher + 0");
 
 const productRandomValues = [0.86, 0.5];
@@ -62,4 +62,13 @@ for (const world of worlds) {
   }
 }
 
-console.log("900 questions générées et validées.");
+for (const skill of Object.keys(engine.SKILL_GENERATORS)) {
+  for (let i = 0; i < 100; i += 1) {
+    const question = engine.generateForSkills([skill], {});
+    assert.equal(question.skill, skill, `${skill}: la question doit venir de la notion achetée`);
+    assert.equal(question.choices.length, 4, `${skill}: quatre choix attendus`);
+    assert.equal(new Set(question.choices).size, 4, `${skill}: choix dupliqués`);
+  }
+}
+
+console.log("1800 questions générées et validées.");

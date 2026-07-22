@@ -6,7 +6,9 @@
   "use strict";
 
   const SKILLS = {
+    proportions: "Proportions",
     evolutions: "Évolutions",
+    units: "Unités",
     algebra: "Calcul algébrique",
     functions: "Fonctions",
     sequences: "Suites",
@@ -77,6 +79,101 @@
   function linearFactor(constant) {
     if (constant === 0) return "x";
     return `(x ${constant > 0 ? "+" : "−"} ${Math.abs(constant)})`;
+  }
+
+  function proportionValue(rng) {
+    const item = pick([
+      { singular: "panneau", plural: "panneaux", unit: "W" },
+      { singular: "capteur", plural: "capteurs", unit: "mesures" },
+      { singular: "module", plural: "modules", unit: "composants" }
+    ], rng);
+    const baseCount = randInt(2, 6, rng);
+    const perItem = randInt(3, 15, rng);
+    let targetCount = randInt(3, 10, rng);
+    if (targetCount === baseCount) targetCount += 2;
+    const baseValue = baseCount * perItem;
+    const targetValue = targetCount * perItem;
+    const { choices, answer } = makeChoices(targetValue, [
+      baseValue + targetCount,
+      baseValue * targetCount,
+      targetValue + perItem
+    ], rng);
+    return {
+      kind: "direct-proportion",
+      skill: "proportions",
+      prompt: `${baseCount} ${baseCount > 1 ? item.plural : item.singular} fournissent ${baseValue} ${item.unit}. Combien en fournissent ${targetCount} ${item.plural} dans la même situation ?`,
+      choices: choices.map(value => `${value} ${item.unit}`), answer,
+      explanation: `Une unité fournit ${baseValue} ÷ ${baseCount} = ${perItem} ${item.unit}. Donc ${targetCount} unités fournissent ${targetCount} × ${perItem} = ${targetValue} ${item.unit}.`
+    };
+  }
+
+  function ratioShare(rng) {
+    const ratioA = randInt(2, 5, rng);
+    const ratioB = randInt(2, 6, rng);
+    const multiplier = randInt(4, 15, rng);
+    const total = (ratioA + ratioB) * multiplier;
+    const askA = rng() < 0.5;
+    const good = (askA ? ratioA : ratioB) * multiplier;
+    const label = askA ? "A" : "B";
+    const { choices, answer } = makeChoices(good, [
+      (askA ? ratioB : ratioA) * multiplier,
+      Math.round(total * (askA ? ratioA : ratioB) / 10),
+      good + multiplier
+    ], rng);
+    return {
+      kind: "ratio-share",
+      skill: "proportions",
+      prompt: `Un stock de ${total} composants est partagé entre les lignes A et B selon le ratio ${ratioA}:${ratioB}. Combien de composants reçoit la ligne ${label} ?`,
+      choices, answer,
+      explanation: `Le ratio comporte ${ratioA + ratioB} parts de ${multiplier} composants. La ligne ${label} reçoit ${askA ? ratioA : ratioB} parts, soit ${good} composants.`
+    };
+  }
+
+  function metricConversion(rng) {
+    const units = [
+      { name: "mm", factor: 0.001 },
+      { name: "cm", factor: 0.01 },
+      { name: "m", factor: 1 },
+      { name: "km", factor: 1000 }
+    ];
+    let fromIndex = randInt(0, units.length - 1, rng);
+    let toIndex = randInt(0, units.length - 1, rng);
+    if (fromIndex === toIndex) toIndex = (toIndex + 1) % units.length;
+    const from = units[fromIndex];
+    const to = units[toIndex];
+    const baseMetres = pick([0.5, 1, 1.2, 2.5, 5, 12, 25, 50], rng);
+    const given = baseMetres / from.factor;
+    const good = baseMetres / to.factor;
+    const { choices, answer } = makeChoices(formatNumber(good, 3), [
+      formatNumber(good * 10, 3),
+      formatNumber(good / 10, 3),
+      formatNumber(given, 3)
+    ], rng);
+    return {
+      kind: "metric-conversion",
+      skill: "units",
+      prompt: `Convertir ${formatNumber(given, 3)} ${from.name} en ${to.name}.`,
+      choices: choices.map(value => `${value} ${to.name}`), answer,
+      explanation: `${formatNumber(given, 3)} ${from.name} correspondent à ${formatNumber(baseMetres, 3)} m, donc à ${formatNumber(good, 3)} ${to.name}.`
+    };
+  }
+
+  function durationConversion(rng) {
+    const hours = randInt(1, 5, rng);
+    const minutes = pick([10, 15, 20, 30, 40, 45, 50], rng);
+    const totalMinutes = hours * 60 + minutes;
+    const { choices, answer } = makeChoices(totalMinutes, [
+      hours * 100 + minutes,
+      hours * 60,
+      totalMinutes + 60
+    ], rng);
+    return {
+      kind: "duration-conversion",
+      skill: "units",
+      prompt: `Convertir ${hours} h ${minutes} min en minutes.`,
+      choices: choices.map(value => `${value} min`), answer,
+      explanation: `${hours} h = ${hours * 60} min. On ajoute ${minutes} min : ${hours * 60} + ${minutes} = ${totalMinutes} min.`
+    };
   }
 
   function percentFinal(rng) {
@@ -309,13 +406,24 @@
   }
 
   const GENERATORS = {
-    energy: [percentFinal, percentRate, successiveRates, functionImage],
+    energy: [proportionValue, ratioShare, percentFinal, percentRate, successiveRates, metricConversion, durationConversion, functionImage],
     factory: [zeroProduct, developExpression, slopeFromPoints, nextSequence, derivativePolynomial],
     data: [meanSeries, conditionalProbability, independentEvents]
   };
 
-  function generate(worldId, mastery = {}, rng = Math.random, exclusions = {}) {
-    const generators = GENERATORS[worldId] || GENERATORS.energy;
+  const SKILL_GENERATORS = {
+    proportions: [proportionValue, ratioShare],
+    evolutions: [percentFinal, percentRate, successiveRates],
+    units: [metricConversion, durationConversion],
+    algebra: [zeroProduct, developExpression],
+    functions: [slopeFromPoints, functionImage],
+    sequences: [nextSequence],
+    derivatives: [derivativePolynomial],
+    statistics: [meanSeries],
+    probability: [conditionalProbability, independentEvents]
+  };
+
+  function selectGenerated(generators, mastery, rng, exclusions) {
     const excludedKeys = new Set(exclusions.keys || []);
     const excludedKinds = new Set(exclusions.kinds || []);
     const generated = generators.map(generator => {
@@ -335,5 +443,16 @@
     return pick(rng() < 0.72 ? weak : candidates, rng);
   }
 
-  return { SKILLS, GENERATORS, generate, fingerprint, affineExpression, linearFactor, formatNumber };
+  function generate(worldId, mastery = {}, rng = Math.random, exclusions = {}) {
+    const generators = GENERATORS[worldId] || GENERATORS.energy;
+    return selectGenerated(generators, mastery, rng, exclusions);
+  }
+
+  function generateForSkills(skills, mastery = {}, rng = Math.random, exclusions = {}) {
+    const selectedSkills = skills.filter(skill => SKILL_GENERATORS[skill]);
+    const generators = selectedSkills.flatMap(skill => SKILL_GENERATORS[skill]);
+    return selectGenerated(generators.length ? generators : SKILL_GENERATORS.proportions, mastery, rng, exclusions);
+  }
+
+  return { SKILLS, GENERATORS, SKILL_GENERATORS, generate, generateForSkills, fingerprint, affineExpression, linearFactor, formatNumber };
 });

@@ -6,8 +6,9 @@ Prototype de jeu incrémental pédagogique destiné aux élèves de **première 
 
 Le contenu suit le **programme d'enseignement de mathématiques de la classe de première de la voie technologique**, publié au Bulletin officiel n° 14 du 2 avril 2026 et applicable à la rentrée 2026-2027.
 
-Le prototype travaille notamment :
+Le jeu travaille notamment :
 
+- proportionnalité, ratios et conversions d'unités ;
 - évolutions en pourcentage et évolutions successives ;
 - calcul algébrique, équations produit nul ;
 - fonctions affines et coefficient directeur ;
@@ -15,17 +16,25 @@ Le prototype travaille notamment :
 - dérivation de polynômes de degré inférieur ou égal à 3 ;
 - statistiques et probabilités conditionnelles ou indépendantes.
 
-La première version ne cherche pas encore à couvrir chaque capacité du programme. Elle valide la boucle de jeu, la génération procédurale et la progression adaptative.
+Les questions sont générées à partir de modèles paramétriques. Un historique récent évite les répétitions strictes et varie les formats proposés.
 
 ## Lancer le jeu
 
 Ouvrir `index.html` dans un navigateur ou servir le dossier avec un serveur statique. Aucune compilation et aucune dépendance ne sont nécessaires.
 
-## Fonctionnement
+## Boucle de jeu
 
-- Une réponse correcte rapporte toujours du flux et de la maîtrise.
-- Une réponse en moins de 8 secondes déclenche un bonus de production temporaire.
-- Les installations produisent ensuite du flux passivement.
-- De nouveaux mondes se débloquent après 12 puis 30 réponses correctes.
-- Un nouveau cycle conserve la maîtrise mais échange l'économie en cours contre un bonus permanent.
+- Le noyau central produit du flux à chaque clic.
+- Après 40 clics manuels, l'**Hypercadence** renforce les clics et ajoute des impulsions automatiques pendant 10 secondes.
+- Neuf ateliers mathématiques s'achètent progressivement et produisent du flux passivement. Leurs paliers 10, 25, 50, 100 et 200 doublent leur puissance.
+- Des perturbations occasionnelles proposent de une à trois questions uniquement parmi les notions achetées. Une réponse rapide améliore la récompense, mais une erreur ne retire aucune ressource.
+- Chaque bonne réponse augmente la maîtrise de la notion et renforce légèrement son atelier.
+- Un nouveau cycle remet à zéro le flux et les ateliers, conserve la maîtrise et accorde un multiplicateur permanent.
 - La progression est enregistrée localement dans le navigateur.
+
+## Vérifications
+
+```sh
+node tests/smoke.mjs
+node tests/economy.mjs
+```
