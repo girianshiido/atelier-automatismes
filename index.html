@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#07131e">
+    <meta name="description" content="Jeu incrémental d'automatismes pour la classe de première STI2D.">
+    <title>NEXUS 1re — Automatismes STI2D</title>
+    <link rel="stylesheet" href="styles.css?v=1">
+  </head>
+  <body>
+    <div class="ambient ambient-a"></div>
+    <div class="ambient ambient-b"></div>
+
+    <header class="topbar">
+      <a class="brand" href="#jeu" aria-label="NEXUS 1re, accueil">
+        <span class="brand-mark" aria-hidden="true">N</span>
+        <span><strong>NEXUS 1re</strong><small>Automatismes STI2D</small></span>
+      </a>
+
+      <div class="top-stats" aria-label="Statistiques de la partie">
+        <div class="stat"><span>Flux</span><strong id="flux-value">0</strong></div>
+        <div class="stat"><span>Production</span><strong id="production-value">0/s</strong></div>
+        <div class="stat"><span>Maîtrise</span><strong id="mastery-value">0</strong></div>
+        <div class="stat streak-stat"><span>Série</span><strong id="streak-value">0</strong></div>
+      </div>
+
+      <button class="icon-button" id="help-button" type="button" aria-label="Ouvrir l'aide">?</button>
+    </header>
+
+    <main id="jeu" class="game-shell">
+      <aside class="world-panel panel">
+        <div class="panel-heading">
+          <p class="eyebrow">Réseau pédagogique</p>
+          <h2>Les mondes</h2>
+        </div>
+        <nav id="world-list" class="world-list" aria-label="Choisir un monde"></nav>
+        <div class="cycle-card">
+          <div>
+            <span>Cycle <b id="cycle-value">1</b></span>
+            <strong><b id="patent-value">0</b> brevet</strong>
+          </div>
+          <p>Chaque brevet augmente définitivement la production de 10 %.</p>
+          <button id="cycle-button" class="small-button" type="button" disabled>Nouveau cycle</button>
+        </div>
+      </aside>
+
+      <section class="challenge-panel panel" aria-labelledby="challenge-title">
+        <div class="challenge-head">
+          <div>
+            <p class="eyebrow" id="world-kicker">Monde 01 · Réseau solaire</p>
+            <h1 id="challenge-title">Active le réseau</h1>
+          </div>
+          <div id="boost-pill" class="boost-pill" aria-live="polite">
+            <span class="boost-dot"></span>
+            <span>Élan ×1</span>
+          </div>
+        </div>
+
+        <div id="question-card" class="question-card">
+          <div class="question-meta">
+            <span id="skill-chip" class="skill-chip">Évolutions</span>
+            <span id="timer-label">Prêt</span>
+          </div>
+          <div class="timer-track" aria-hidden="true"><span id="timer-bar"></span></div>
+          <div id="question-visual" class="question-visual" hidden></div>
+          <p id="question-text" class="question-text">Une réponse juste alimente le réseau. Une réponse rapide déclenche un multiplicateur temporaire.</p>
+          <div id="answers" class="answers"></div>
+          <button id="start-button" class="primary-button" type="button">Lancer le premier défi</button>
+          <div id="feedback" class="feedback" aria-live="polite" hidden></div>
+        </div>
+
+        <div class="mission-strip">
+          <div class="mission-copy">
+            <span class="mission-icon" aria-hidden="true">◎</span>
+            <div><small>Mission active</small><strong id="mission-title">Réussir 5 défis</strong></div>
+          </div>
+          <div class="mission-progress"><span id="mission-bar"></span></div>
+          <b id="mission-count">0/5</b>
+        </div>
+      </section>
+
+      <aside class="factory-panel panel">
+        <div class="panel-heading factory-heading">
+          <div><p class="eyebrow">Production passive</p><h2>Installations</h2></div>
+          <span id="world-output" class="output-badge">0/s</span>
+        </div>
+        <div id="upgrade-list" class="upgrade-list"></div>
+        <div class="mastery-card">
+          <div class="mastery-card-head"><strong>Compétences du monde</strong><span id="world-mastery">0 pts</span></div>
+          <div id="skill-list" class="skill-list"></div>
+        </div>
+      </aside>
+    </main>
+
+    <section class="roadmap panel" aria-labelledby="roadmap-title">
+      <div class="roadmap-intro">
+        <p class="eyebrow">Progression sans fin</p>
+        <h2 id="roadmap-title">Le réseau se réorganise autour de tes acquis</h2>
+        <p>Les notions fragiles reviennent davantage. Les nombres et les formes changent à chaque défi : impossible d'apprendre les réponses par cœur.</p>
+      </div>
+      <div class="roadmap-items">
+        <article><span>01</span><div><strong>Répondre</strong><small>Gagner du flux et de la maîtrise</small></div></article>
+        <article><span>02</span><div><strong>Automatiser</strong><small>Répondre vite pour déclencher l'élan</small></div></article>
+        <article><span>03</span><div><strong>Construire</strong><small>Transformer le flux en production passive</small></div></article>
+        <article><span>∞</span><div><strong>Recommencer</strong><small>Obtenir des brevets sans perdre ses acquis</small></div></article>
+      </div>
+    </section>
+
+    <footer>
+      <span>Prototype pédagogique · Programme de première technologique, BO du 2 avril 2026</span>
+      <button id="reset-button" class="text-button" type="button">Réinitialiser la partie</button>
+    </footer>
+
+    <dialog id="help-dialog">
+      <form method="dialog" class="dialog-card">
+        <button class="dialog-close" value="close" aria-label="Fermer">×</button>
+        <p class="eyebrow">Comment jouer</p>
+        <h2>Apprendre fait avancer le monde</h2>
+        <ol>
+          <li><b>Réponds juste</b> pour gagner du flux et un point de maîtrise.</li>
+          <li><b>Réponds en moins de 8 secondes</b> pour accélérer temporairement toute ta production.</li>
+          <li><b>Achète des installations</b> : elles produisent du flux même entre deux questions.</li>
+          <li><b>Débloque les mondes</b> avec tes réponses correctes, puis lance de nouveaux cycles.</li>
+        </ol>
+        <p class="dialog-note">La rapidité donne seulement un bonus. Une réponse correcte rapporte toujours, même après réflexion.</p>
+        <button class="primary-button" value="close">J'ai compris</button>
+      </form>
+    </dialog>
+
+    <dialog id="confirm-dialog">
+      <form method="dialog" class="dialog-card compact-dialog">
+        <p class="eyebrow">Nouveau cycle</p>
+        <h2 id="confirm-title">Reconfigurer le réseau ?</h2>
+        <p id="confirm-text"></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" value="cancel">Annuler</button>
+          <button id="confirm-action" class="primary-button" value="confirm">Confirmer</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="question-engine.js?v=1"></script>
+    <script src="app.js?v=1"></script>
+  </body>
+</html>

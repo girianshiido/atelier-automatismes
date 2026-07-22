@@ -1,0 +1,270 @@
+(function (root, factory) {
+  const api = factory();
+  if (typeof module === "object" && module.exports) module.exports = api;
+  else root.QuestionEngine = api;
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  "use strict";
+
+  const SKILLS = {
+    evolutions: "Évolutions",
+    algebra: "Calcul algébrique",
+    functions: "Fonctions",
+    sequences: "Suites",
+    derivatives: "Dérivation",
+    statistics: "Statistiques",
+    probability: "Probabilités"
+  };
+
+  function randInt(min, max, rng = Math.random) {
+    return Math.floor(rng() * (max - min + 1)) + min;
+  }
+
+  function pick(array, rng = Math.random) {
+    return array[Math.floor(rng() * array.length)];
+  }
+
+  function shuffle(array, rng = Math.random) {
+    const copy = array.slice();
+    for (let i = copy.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(rng() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  }
+
+  function formatNumber(value, digits = 2) {
+    const rounded = Math.round((value + Number.EPSILON) * 10 ** digits) / 10 ** digits;
+    return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: digits }).format(rounded);
+  }
+
+  function makeChoices(correct, distractors, rng = Math.random) {
+    const values = [String(correct), ...distractors.map(String)];
+    const unique = [...new Set(values)];
+    let bump = 1;
+    while (unique.length < 4) {
+      const numeric = Number(String(correct).replace(",", "."));
+      const candidate = Number.isFinite(numeric)
+        ? String(numeric + bump)
+        : ["Aucune de ces réponses", "Impossible à déterminer", "Toutes les réponses"][bump - 1];
+      if (candidate && !unique.includes(candidate)) unique.push(candidate);
+      bump += 1;
+    }
+    const choices = shuffle(unique.slice(0, 4), rng);
+    return { choices, answer: choices.indexOf(String(correct)) };
+  }
+
+  function percentFinal(rng) {
+    const initial = pick([80, 100, 120, 160, 200, 240, 320, 400, 500], rng);
+    const rate = pick([-25, -20, -10, 5, 10, 15, 20, 25], rng);
+    const final = initial * (1 + rate / 100);
+    const { choices, answer } = makeChoices(formatNumber(final), [
+      formatNumber(initial + rate),
+      formatNumber(initial * (1 - rate / 100)),
+      formatNumber(final + initial * 0.1)
+    ], rng);
+    return {
+      skill: "evolutions",
+      prompt: `Une batterie stocke ${initial} Wh. Sa capacité ${rate >= 0 ? "augmente" : "diminue"} de ${Math.abs(rate)} %. Quelle est sa nouvelle capacité ?`,
+      choices: choices.map(v => `${v} Wh`), answer,
+      explanation: `On multiplie ${initial} par ${formatNumber(1 + rate / 100)} : on obtient ${formatNumber(final)} Wh.`
+    };
+  }
+
+  function percentRate(rng) {
+    const start = pick([80, 100, 120, 160, 200, 250, 400], rng);
+    const rate = pick([-25, -20, -10, 10, 20, 25, 50], rng);
+    const end = start * (1 + rate / 100);
+    const sign = rate > 0 ? "+" : "−";
+    const { choices, answer } = makeChoices(`${sign}${Math.abs(rate)} %`, [
+      `${rate > 0 ? "+" : "−"}${Math.abs(rate / 2)} %`,
+      `${rate > 0 ? "+" : "−"}${Math.abs(rate + (rate > 0 ? 10 : -10))} %`,
+      `${rate < 0 ? "+" : "−"}${Math.abs(rate)} %`
+    ], rng);
+    return {
+      skill: "evolutions",
+      prompt: `Une production passe de ${start} à ${formatNumber(end)} unités. Quel est son taux d'évolution ?`,
+      choices, answer,
+      explanation: `(${formatNumber(end)} − ${start}) ÷ ${start} = ${formatNumber(rate / 100)} ; le taux est donc ${sign}${Math.abs(rate)} %.`
+    };
+  }
+
+  function successiveRates(rng) {
+    const r1 = pick([-20, -10, 10, 20, 25], rng);
+    const r2 = pick([-20, -10, 10, 20, 25], rng);
+    const total = ((1 + r1 / 100) * (1 + r2 / 100) - 1) * 100;
+    const good = `${total >= 0 ? "+" : "−"}${formatNumber(Math.abs(total), 1)} %`;
+    const sum = r1 + r2;
+    const { choices, answer } = makeChoices(good, [
+      `${sum >= 0 ? "+" : "−"}${Math.abs(sum)} %`,
+      `${total >= 0 ? "+" : "−"}${formatNumber(Math.abs(total) + 2, 1)} %`,
+      `${total < 0 ? "+" : "−"}${formatNumber(Math.abs(total), 1)} %`
+    ], rng);
+    return {
+      skill: "evolutions",
+      prompt: `Une valeur évolue de ${r1 >= 0 ? "+" : "−"}${Math.abs(r1)} %, puis de ${r2 >= 0 ? "+" : "−"}${Math.abs(r2)} %. Quelle est l'évolution globale ?`,
+      choices, answer,
+      explanation: `Les coefficients se multiplient : ${formatNumber(1 + r1 / 100)} × ${formatNumber(1 + r2 / 100)} = ${formatNumber(1 + total / 100, 3)}, soit ${good}.`
+    };
+  }
+
+  function zeroProduct(rng) {
+    let a = randInt(-6, 6, rng);
+    let b = randInt(-6, 6, rng);
+    if (a === b) b = b === 6 ? b - 2 : b + 2;
+    const root1 = -a;
+    const root2 = -b;
+    const ordered = [root1, root2].sort((x, y) => x - y);
+    const good = `x = ${ordered[0]} ou x = ${ordered[1]}`;
+    const form = n => n >= 0 ? `+ ${n}` : `− ${Math.abs(n)}`;
+    const { choices, answer } = makeChoices(good, [
+      `x = ${a} ou x = ${b}`,
+      `x = ${root1 + 1} ou x = ${root2 + 1}`,
+      `x = ${root1 * root2}`
+    ], rng);
+    return {
+      skill: "algebra",
+      prompt: `Résoudre (${`x ${form(a)}`})(${`x ${form(b)}`}) = 0.`,
+      choices, answer,
+      explanation: `Un produit est nul si l'un de ses facteurs est nul : les solutions sont ${good}.`
+    };
+  }
+
+  function developExpression(rng) {
+    const k = pick([2, 3, 4, 5], rng);
+    const a = randInt(2, 7, rng);
+    const m = randInt(1, 5, rng);
+    const xcoef = k + m;
+    const constant = k * a;
+    const good = `${xcoef}x + ${constant}`;
+    const { choices, answer } = makeChoices(good, [
+      `${xcoef}x + ${a}`,
+      `${k * m}x + ${constant}`,
+      `${xcoef + a}x + ${constant}`
+    ], rng);
+    return {
+      skill: "algebra",
+      prompt: `Développer et réduire : ${k}(x + ${a}) + ${m}x.`,
+      choices, answer,
+      explanation: `${k}(x + ${a}) = ${k}x + ${constant}. En ajoutant ${m}x, on obtient ${good}.`
+    };
+  }
+
+  function slopeFromPoints(rng) {
+    const x1 = randInt(-3, 2, rng);
+    const dx = pick([1, 2, 3], rng);
+    const slope = pick([-4, -3, -2, 1, 2, 3, 4], rng);
+    const y1 = randInt(-5, 5, rng);
+    const x2 = x1 + dx;
+    const y2 = y1 + slope * dx;
+    const { choices, answer } = makeChoices(formatNumber(slope), [formatNumber(-slope), formatNumber(slope + 1), formatNumber(dx / (y2 - y1))], rng);
+    return {
+      skill: "functions",
+      prompt: `Une droite passe par A(${x1} ; ${y1}) et B(${x2} ; ${y2}). Quel est son coefficient directeur ?`,
+      choices, answer,
+      explanation: `m = (${y2} − ${y1}) ÷ (${x2} − ${x1}) = ${formatNumber(slope)}.`
+    };
+  }
+
+  function functionImage(rng) {
+    const a = pick([-4, -3, -2, 2, 3, 4], rng);
+    const b = randInt(-6, 6, rng);
+    const x = randInt(-4, 5, rng);
+    const value = a * x + b;
+    const sign = b >= 0 ? `+ ${b}` : `− ${Math.abs(b)}`;
+    const { choices, answer } = makeChoices(value, [a + x + b, a * x - b, value + a], rng);
+    return {
+      skill: "functions",
+      prompt: `Soit f(x) = ${a}x ${sign}. Quelle est l'image de ${x} par f ?`,
+      choices, answer,
+      explanation: `f(${x}) = ${a} × (${x}) ${sign} = ${value}.`
+    };
+  }
+
+  function nextSequence(rng) {
+    const geometric = rng() > 0.5;
+    if (geometric) {
+      const q = pick([2, 3, 4], rng);
+      const u0 = randInt(1, 5, rng);
+      const values = [u0, u0 * q, u0 * q ** 2, u0 * q ** 3];
+      const good = u0 * q ** 4;
+      const { choices, answer } = makeChoices(good, [good + q, values[3] + q, values[3] * (q + 1)], rng);
+      return { skill: "sequences", prompt: `Compléter la suite géométrique : ${values.join(" ; ")} ; …`, choices, answer, explanation: `Chaque terme est multiplié par ${q}. Le terme suivant vaut ${values[3]} × ${q} = ${good}.` };
+    }
+    const r = pick([-5, -3, 2, 4, 6, 8], rng);
+    const u0 = randInt(-4, 12, rng);
+    const values = [u0, u0 + r, u0 + 2 * r, u0 + 3 * r];
+    const good = u0 + 4 * r;
+    const { choices, answer } = makeChoices(good, [good + r, values[3] * r, good - 1], rng);
+    return { skill: "sequences", prompt: `Compléter la suite arithmétique : ${values.join(" ; ")} ; …`, choices, answer, explanation: `On ajoute ${r} à chaque terme. Le terme suivant vaut ${values[3]} ${r >= 0 ? "+" : "−"} ${Math.abs(r)} = ${good}.` };
+  }
+
+  function derivativePolynomial(rng) {
+    const a = pick([-4, -3, -2, 2, 3, 4], rng);
+    const b = randInt(-6, 6, rng);
+    const c = randInt(-8, 8, rng);
+    const bs = b >= 0 ? `+ ${b}x` : `− ${Math.abs(b)}x`;
+    const cs = c >= 0 ? `+ ${c}` : `− ${Math.abs(c)}`;
+    const good = `${2 * a}x ${b >= 0 ? "+" : "−"} ${Math.abs(b)}`;
+    const { choices, answer } = makeChoices(good, [
+      `${a}x ${b >= 0 ? "+" : "−"} ${Math.abs(b)}`,
+      `${2 * a}x² ${b >= 0 ? "+" : "−"} ${Math.abs(b)}`,
+      `${2 * a}x ${c >= 0 ? "+" : "−"} ${Math.abs(c)}`
+    ], rng);
+    return { skill: "derivatives", prompt: `Soit f(x) = ${a}x² ${bs} ${cs}. Quelle est sa fonction dérivée ?`, choices, answer, explanation: `La dérivée de ax² + bx + c est 2ax + b. Donc f′(x) = ${good}.` };
+  }
+
+  function meanSeries(rng) {
+    const values = Array.from({ length: 4 }, () => randInt(4, 18, rng));
+    const sum = values.reduce((a, b) => a + b, 0);
+    const mean = sum / values.length;
+    const { choices, answer } = makeChoices(formatNumber(mean), [formatNumber(sum / 5), formatNumber(mean + 1), formatNumber(values.sort((a,b)=>a-b)[1])], rng);
+    return { skill: "statistics", prompt: `Quelle est la moyenne de la série : ${values.join(" ; ")} ?`, choices, answer, explanation: `La somme vaut ${sum}. La moyenne est ${sum} ÷ 4 = ${formatNumber(mean)}.` };
+  }
+
+  function conditionalProbability(rng) {
+    const aYes = randInt(12, 28, rng);
+    const aNo = randInt(6, 18, rng);
+    const bYes = randInt(8, 22, rng);
+    const bNo = randInt(10, 25, rng);
+    const totalA = aYes + aNo;
+    const probability = aYes / totalA;
+    const percent = Math.round(probability * 1000) / 10;
+    const total = totalA + bYes + bNo;
+    const { choices, answer } = makeChoices(`${formatNumber(percent, 1)} %`, [
+      `${formatNumber(aYes / total * 100, 1)} %`,
+      `${formatNumber(aYes / (aYes + bYes) * 100, 1)} %`,
+      `${formatNumber(aNo / totalA * 100, 1)} %`
+    ], rng);
+    return {
+      skill: "probability",
+      prompt: `On choisit une pièce au hasard parmi les pièces de la ligne A. Quelle est la probabilité qu'elle soit conforme ?`,
+      choices, answer,
+      visual: `<table aria-label="Tableau des pièces contrôlées"><tr><th></th><th>Conformes</th><th>Non conformes</th></tr><tr><th>Ligne A</th><td>${aYes}</td><td>${aNo}</td></tr><tr><th>Ligne B</th><td>${bYes}</td><td>${bNo}</td></tr></table>`,
+      explanation: `Parmi les ${totalA} pièces de la ligne A, ${aYes} sont conformes : ${aYes} ÷ ${totalA} ≈ ${formatNumber(percent, 1)} %.`
+    };
+  }
+
+  function independentEvents(rng) {
+    const pA = pick([0.2, 0.3, 0.4, 0.5, 0.6, 0.8], rng);
+    const pB = pick([0.2, 0.25, 0.4, 0.5, 0.6], rng);
+    const good = pA * pB;
+    const { choices, answer } = makeChoices(formatNumber(good, 2), [formatNumber(pA + pB, 2), formatNumber(1 - good, 2), formatNumber(pA / pB, 2)], rng);
+    return { skill: "probability", prompt: `Les événements A et B sont indépendants, avec P(A) = ${formatNumber(pA)} et P(B) = ${formatNumber(pB)}. Calculer P(A ∩ B).`, choices, answer, explanation: `Pour des événements indépendants, P(A ∩ B) = P(A) × P(B) = ${formatNumber(pA)} × ${formatNumber(pB)} = ${formatNumber(good, 2)}.` };
+  }
+
+  const GENERATORS = {
+    energy: [percentFinal, percentRate, successiveRates, functionImage],
+    factory: [zeroProduct, developExpression, slopeFromPoints, nextSequence, derivativePolynomial],
+    data: [meanSeries, conditionalProbability, independentEvents]
+  };
+
+  function generate(worldId, mastery = {}, rng = Math.random) {
+    const generators = GENERATORS[worldId] || GENERATORS.energy;
+    const generated = generators.map(generator => generator(rng));
+    const min = Math.min(...generated.map(q => Number(mastery[q.skill] || 0)));
+    const weak = generated.filter(q => Number(mastery[q.skill] || 0) <= min + 1);
+    return pick(rng() < 0.72 ? weak : generated, rng);
+  }
+
+  return { SKILLS, GENERATORS, generate, formatNumber };
+});
