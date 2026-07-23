@@ -28,6 +28,9 @@ assert.equal(engine.linearFactor(5), "(x + 5)", "un facteur non nul doit rester 
 const lineEquation = engine.SKILL_GENERATORS.functions[2](() => 0.5);
 assert.match(lineEquation.prompt, /équation réduite/, "la lecture graphique doit demander une équation réduite");
 assert.ok(lineEquation.choices.every(choice => choice.startsWith("y = ")), "une équation réduite de droite doit être écrite sous la forme y = ax + b");
+const variationQuestion = engine.SKILL_GENERATORS.functions[7](Math.random);
+assert.match(variationQuestion.visual, /<svg class="variation-svg"/, "un tableau de variations doit utiliser un dessin vectoriel");
+assert.match(variationQuestion.visual, /marker-end="url\(#variation-arrow-/, "les variations doivent être représentées par de vraies flèches");
 assert.equal(engine.canonicalChoice("1/2"), engine.canonicalChoice("2/4"), "les fractions équivalentes doivent être reconnues");
 const ratioQuestion = engine.SKILL_GENERATORS.proportions[1](Math.random);
 assert.equal(ratioQuestion.kind, "ratio-comparison", "le ratio doit comparer deux quantités comme dans le programme de seconde 2026");

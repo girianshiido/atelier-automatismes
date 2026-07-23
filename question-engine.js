@@ -792,12 +792,30 @@
       "Sur ℝ tout entier",
       "Sur aucun intervalle"
     ], rng);
+    const arrowId = `variation-arrow-${vertex}-${minimum ? "min" : "max"}`;
+    const points = minimum
+      ? { leftY: 51, centerY: 92, rightY: 35 }
+      : { leftY: 94, centerY: 36, rightY: 102 };
+    const variationVisual = `<svg class="variation-svg" viewBox="0 0 430 128" role="img" aria-label="Tableau de variations : f décroît ${minimum ? "jusqu'à" : "après"} ${vertex}">
+      <defs><marker id="${arrowId}" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" /></marker></defs>
+      <path class="variation-grid" d="M56 10V118 M56 42H420" />
+      <text class="variation-axis" x="24" y="31">x</text>
+      <text class="variation-axis" x="18" y="91">f(x)</text>
+      <text class="variation-x" x="92" y="31">−∞</text>
+      <text class="variation-x" x="214" y="31">${vertex}</text>
+      <text class="variation-x" x="357" y="31">+∞</text>
+      <line class="variation-arrow" x1="100" y1="${points.leftY}" x2="207" y2="${points.centerY}" marker-end="url(#${arrowId})" />
+      <line class="variation-arrow" x1="235" y1="${points.centerY}" x2="350" y2="${points.rightY}" marker-end="url(#${arrowId})" />
+      <text class="variation-value" x="76" y="${points.leftY - 7}">${values[0]}</text>
+      <text class="variation-value" x="211" y="${points.centerY - 8}">${values[1]}</text>
+      <text class="variation-value" x="362" y="${points.rightY - 8}">${values[2]}</text>
+    </svg>`;
     return {
       kind: "variation-reading",
       skill: "functions",
       prompt: "Sur quel intervalle la fonction est-elle décroissante d'après ce tableau de variations ?",
       choices, answer,
-      visual: `<table aria-label="Tableau de variations"><tr><th>x</th><td>−∞</td><td>${vertex}</td><td>+∞</td></tr><tr><th>f(x)</th><td>${values[0]}</td><td>${minimum ? "↘ " : "↗ "}${values[1]}${minimum ? " ↗" : " ↘"}</td><td>${values[2]}</td></tr></table>`,
+      visual: variationVisual,
       explanation: `Les flèches montrent que f décroît sur ${good}.`
     };
   }
