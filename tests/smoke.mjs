@@ -25,6 +25,9 @@ assert.equal(engine.affineExpression(1, -2), "x − 2", "le coefficient 1 ne doi
 assert.equal(engine.affineExpression(-1, 0), "−x", "le coefficient -1 doit être écrit avec un simple signe moins");
 assert.equal(engine.linearFactor(0), "x", "le facteur x + 0 doit être simplifié en x");
 assert.equal(engine.linearFactor(5), "(x + 5)", "un facteur non nul doit rester entre parenthèses");
+const lineEquation = engine.SKILL_GENERATORS.functions[2](() => 0.5);
+assert.match(lineEquation.prompt, /équation réduite/, "la lecture graphique doit demander une équation réduite");
+assert.ok(lineEquation.choices.every(choice => choice.startsWith("y = ")), "une équation réduite de droite doit être écrite sous la forme y = ax + b");
 assert.equal(engine.canonicalChoice("1/2"), engine.canonicalChoice("2/4"), "les fractions équivalentes doivent être reconnues");
 const ratioQuestion = engine.SKILL_GENERATORS.proportions[1](Math.random);
 assert.equal(ratioQuestion.kind, "ratio-comparison", "le ratio doit comparer deux quantités comme dans le programme de seconde 2026");

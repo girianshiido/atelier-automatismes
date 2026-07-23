@@ -682,11 +682,11 @@
   function graphLineEquation(rng) {
     const slope = pick([-2, -1, 1, 2], rng);
     const intercept = randInt(-2, 2, rng);
-    const good = `f(x) = ${affineExpression(slope, intercept)}`;
+    const good = `y = ${affineExpression(slope, intercept)}`;
     const { choices, answer } = makeChoices(good, [
-      `f(x) = ${affineExpression(-slope, intercept)}`,
-      `f(x) = ${affineExpression(slope, intercept + (intercept === 2 ? -1 : 1))}`,
-      `f(x) = ${affineExpression(slope + (slope > 0 ? 1 : -1), intercept)}`
+      `y = ${affineExpression(-slope, intercept)}`,
+      `y = ${affineExpression(slope, intercept + (intercept === 2 ? -1 : 1))}`,
+      `y = ${affineExpression(slope + (slope > 0 ? 1 : -1), intercept)}`
     ], rng);
     return {
       kind: "graph-line-equation",
@@ -694,7 +694,7 @@
       prompt: "Quelle équation réduite correspond à la droite représentée ?",
       choices, answer,
       visual: `<canvas class="question-plot" data-plot="line" data-slope="${slope}" data-intercept="${intercept}" role="img" aria-label="Droite d'équation à déterminer dans un repère gradué"></canvas>`,
-      explanation: `La droite coupe l'axe des ordonnées en ${intercept} et avance de ${slope} verticalement quand x augmente de 1 : ${good}.`
+      explanation: `La droite coupe l'axe des ordonnées en ${intercept} et monte de ${slope} quand x augmente de 1 : ${good}.`
     };
   }
 
