@@ -845,18 +845,18 @@
     const arrowId = `variation-arrow-${vertex}-${minimum ? "min" : "max"}`;
     const layout = minimum
       ? {
-          arrows: { leftY: 56, centerY: 86, rightY: 38 },
-          labels: { leftY: 44, centerY: 111, rightY: 26 }
+          arrows: { leftY: 65, centerY: 100, rightY: 58 },
+          labels: { leftY: 86, centerY: 117, rightY: 80 }
         }
       : {
           arrows: { leftY: 94, centerY: 56, rightY: 102 },
-          labels: { leftY: 82, centerY: 25, rightY: 90 }
+          labels: { leftY: 114, centerY: 78, rightY: 120 }
         };
     const variationVisual = `<svg class="variation-svg" viewBox="0 0 430 128" role="img" aria-label="Tableau de variations : f décroît ${minimum ? "jusqu'à" : "après"} ${vertex}">
       <defs><marker id="${arrowId}" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" /></marker></defs>
       <path class="variation-grid" d="M56 10V118 M56 42H420" />
       <text class="variation-axis" x="24" y="31">x</text>
-      <text class="variation-axis" x="18" y="91">f(x)</text>
+      <text class="variation-axis" x="24" y="91">f(x)</text>
       <text class="variation-x" x="92" y="31">−∞</text>
       <text class="variation-x" x="214" y="31">${vertex}</text>
       <text class="variation-x" x="357" y="31">+∞</text>
