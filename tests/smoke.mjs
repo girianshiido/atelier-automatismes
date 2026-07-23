@@ -44,6 +44,18 @@ const explicitSequenceWithOne = engine.SKILL_GENERATORS.sequences[1](() => 0);
 assert.match(explicitSequenceWithOne.prompt, /uₙ = 2ⁿ/, "un coefficient 1 doit être omis devant une puissance");
 assert.doesNotMatch(explicitSequenceWithOne.prompt, /1 ×/, "aucune multiplication par 1 ne doit être affichée");
 
+const scientificQuestion = engine.SKILL_GENERATORS.numeric[2](() => 0);
+assert.ok(scientificQuestion.choices.some(choice => /^20 × 10/.test(choice)), "la notation scientifique doit proposer une écriture équivalente mais non normalisée");
+
+const developFamilies = new Set();
+for (let i = 0; i < 300; i += 1) {
+  const question = engine.SKILL_GENERATORS.algebra[1](Math.random);
+  if (/\(x \+ \d+\)\(x − \d+\)/.test(question.prompt)) developFamilies.add("product");
+  else if (/\) \+ \d+x\./.test(question.prompt)) developFamilies.add("reduction");
+  else developFamilies.add("simple");
+}
+assert.deepEqual([...developFamilies].sort(), ["product", "reduction", "simple"], "les développements doivent couvrir trois familles complémentaires");
+
 const productRandomValues = [0.86, 0.5];
 const productWithZero = engine.GENERATORS.factory[0](() => productRandomValues.shift() ?? 0.5);
 assert.match(productWithZero.prompt, /Résoudre x\(x \+ 5\) = 0\./, "le facteur x + 0 doit être écrit x et placé en premier");

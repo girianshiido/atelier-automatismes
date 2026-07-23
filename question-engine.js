@@ -225,9 +225,10 @@
     const exponent = pick([-5, -4, -3, 3, 4, 5], rng);
     const value = coefficient * 10 ** exponent;
     const good = `${coefficient} × 10${superscript(exponent)}`;
+    const equivalentButNotScientific = `${coefficient * 10} × 10${superscript(exponent - 1)}`;
     const { choices, answer } = makeChoices(good, [
       `${coefficient} × 10${superscript(exponent + (exponent > 0 ? -1 : 1))}`,
-      `${coefficient * 10} × 10${superscript(exponent)}`,
+      equivalentButNotScientific,
       `${coefficient} × 10${superscript(-exponent)}`
     ], rng);
     return {
@@ -235,7 +236,7 @@
       skill: "numeric",
       prompt: `Écrire ${formatNumber(value, 8)} en notation scientifique.`,
       choices, answer,
-      explanation: `La mantisse doit être comprise entre 1 et 10 : ${formatNumber(value, 8)} = ${good}.`
+      explanation: `La mantisse doit être comprise entre 1 et 10 : ${formatNumber(value, 8)} = ${good}. ${equivalentButNotScientific} représente le même nombre, mais sa mantisse vaut ${coefficient * 10} : ce n'est donc pas une notation scientifique.`
     };
   }
 
@@ -577,23 +578,60 @@
   }
 
   function developExpression(rng) {
-    const k = pick([2, 3, 4, 5], rng);
-    const a = randInt(2, 7, rng);
-    const m = randInt(1, 5, rng);
-    const xcoef = k + m;
-    const constant = k * a;
-    const good = `${xcoef}x + ${constant}`;
+    const family = pick(["simple", "reduction", "product"], rng);
+    if (family === "simple") {
+      const k = pick([2, 3, 4, 5], rng);
+      const a = randInt(2, 5, rng);
+      const constant = pick([-6, -4, 2, 3, 5], rng);
+      const good = affineExpression(k * a, k * constant);
+      const { choices, answer } = makeChoices(good, [
+        affineExpression(k * a, constant),
+        affineExpression(a, k * constant),
+        affineExpression(k + a, constant)
+      ], rng);
+      return {
+        kind: "develop-expression",
+        skill: "algebra",
+        prompt: `Développer et réduire : ${k}(${affineExpression(a, constant)}).`,
+        choices, answer,
+        explanation: `On distribue ${k} à chacun des termes : ${k}(${affineExpression(a, constant)}) = ${good}.`
+      };
+    }
+
+    if (family === "reduction") {
+      const k = pick([2, 3, 4, 5], rng);
+      const a = randInt(2, 5, rng);
+      const constant = pick([-6, -4, 2, 3, 5], rng);
+      const m = randInt(2, 5, rng);
+      const good = affineExpression(k * a + m, k * constant);
+      const { choices, answer } = makeChoices(good, [
+        affineExpression(k * a, k * constant),
+        affineExpression(k * a + m, constant),
+        affineExpression(k + a + m, k * constant)
+      ], rng);
+      return {
+        kind: "develop-expression",
+        skill: "algebra",
+        prompt: `Développer et réduire : ${k}(${affineExpression(a, constant)}) + ${m}x.`,
+        choices, answer,
+        explanation: `${k}(${affineExpression(a, constant)}) = ${affineExpression(k * a, k * constant)} ; puis on réduit les termes en x : ${good}.`
+      };
+    }
+
+    const firstConstant = randInt(2, 6, rng);
+    const secondConstant = randInt(1, 5, rng);
+    const good = polynomialExpression(1, firstConstant - secondConstant, -firstConstant * secondConstant);
     const { choices, answer } = makeChoices(good, [
-      `${xcoef}x + ${a}`,
-      `${k * m}x + ${constant}`,
-      `${xcoef + a}x + ${constant}`
+      polynomialExpression(1, firstConstant + secondConstant, -firstConstant * secondConstant),
+      polynomialExpression(1, firstConstant - secondConstant, firstConstant * secondConstant),
+      affineExpression(firstConstant - secondConstant, -firstConstant * secondConstant)
     ], rng);
     return {
       kind: "develop-expression",
       skill: "algebra",
-      prompt: `Développer et réduire : ${k}(x + ${a}) + ${m}x.`,
+      prompt: `Développer et réduire : (x + ${firstConstant})(x − ${secondConstant}).`,
       choices, answer,
-      explanation: `${k}(x + ${a}) = ${k}x + ${constant}. En ajoutant ${m}x, on obtient ${good}.`
+      explanation: `(x + ${firstConstant})(x − ${secondConstant}) = x² − ${secondConstant}x + ${firstConstant}x − ${firstConstant * secondConstant} = ${good}.`
     };
   }
 
