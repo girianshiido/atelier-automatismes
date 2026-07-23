@@ -317,7 +317,7 @@
       {
         statement: "Si un entier est divisible par 4, alors il est pair.",
         reciprocal: "Si un entier est pair, alors il est divisible par 4.",
-        contrapositive: "Si un entier n'est pas pair, alors il n'est pas divisible par 4.",
+        contrapositive: "Si un entier est impair, alors il n'est pas divisible par 4.",
         other: "Si un entier est divisible par 2, alors il est impair."
       },
       {

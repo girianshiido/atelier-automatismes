@@ -85,6 +85,12 @@ for (let i = 0; i < 500; i += 1) {
 }
 assert.deepEqual([...intersectionSizes].sort((a, b) => a - b), [0, 1, 2, 3], "les intersections doivent varier de vide à trois éléments");
 
+for (let i = 0; i < 200; i += 1) {
+  const question = engine.SKILL_GENERATORS.logic[2](Math.random);
+  const content = [question.prompt, ...question.choices, question.explanation].join(" ");
+  assert.doesNotMatch(content, /n'est pas pair|n'est pas impair/, "les contraposées sur la parité doivent employer pair ou impair sans négation");
+}
+
 const zeroEvolutionValues = [0.9, 0];
 const zeroEvolution = engine.SKILL_GENERATORS.evolutions[2](() => zeroEvolutionValues.shift() ?? 0.5);
 assert.equal(zeroEvolution.choices[zeroEvolution.answer], "Pas d'évolution", "un taux nul doit être formulé sans signe +");
