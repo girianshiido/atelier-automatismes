@@ -741,6 +741,7 @@ dialog::backdrop { background: rgba(1, 9, 14, 0.82); backdrop-filter: blur(8px);
 .network-detail .active-effect, .network-detail .unlocked-box { margin: 0; }
 .network-detail .unlocked-box { padding: 14px; border: 1px solid var(--line); border-radius: 14px; }
 .network-panel .event-countdown { margin: 15px 0 0; }
+.network-reset-button { display: none; margin: 16px auto 0; color: rgba(255, 186, 107, 0.82); font-size: 11px; }
 
 .event-card {
   position: fixed;
@@ -829,6 +830,7 @@ footer { width: min(1180px, calc(100% - 32px)); margin-top: 15px; padding-bottom
   .workshop-list, .workshop-upgrade-list { grid-template-columns: 1fr; }
   .network-summary { grid-template-columns: 1fr 1fr; }
   .network-detail { grid-template-columns: 1fr; }
+  .network-reset-button { display: block; }
   .calibration-dialog-card .calibration-upgrade-list { grid-template-columns: 1fr; }
 
   .event-card { top: calc(env(safe-area-inset-top, 0px) + 62px); }

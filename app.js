@@ -107,6 +107,7 @@
     questionReference: $("#question-reference"),
     eventNext: $("#event-next"),
     resetButton: $("#reset-button"),
+    resetMobileButton: $("#reset-mobile-button"),
     confirmDialog: $("#confirm-dialog"),
     confirmKicker: $("#confirm-kicker"),
     confirmTitle: $("#confirm-title"),
@@ -1162,6 +1163,7 @@
   dom.reportQuestion.addEventListener("click", reportCurrentQuestion);
   dom.cycleButton.addEventListener("click", () => showConfirm("cycle"));
   dom.resetButton.addEventListener("click", () => showConfirm("reset"));
+  dom.resetMobileButton.addEventListener("click", () => showConfirm("reset"));
   dom.confirmAction.addEventListener("click", event => {
     event.preventDefault();
     dom.confirmDialog.close();
