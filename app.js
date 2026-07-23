@@ -72,8 +72,12 @@
     unlockedSkills: $("#unlocked-skills"),
     workshopList: $("#workshop-list"),
     helpButton: $("#help-button"),
+    programmeButton: $("#programme-button"),
     soundButton: $("#sound-button"),
     helpDialog: $("#help-dialog"),
+    programmeDialog: $("#programme-dialog"),
+    programmeSummary: $("#programme-summary"),
+    programmeGrid: $("#programme-grid"),
     eventDialog: $("#event-dialog"),
     eventClose: $("#event-close"),
     eventKicker: $("#event-kicker"),
@@ -242,6 +246,98 @@
       hash = Math.imul(hash, 16777619);
     }
     return `${question.kind.slice(0, 4).toUpperCase()}-${(hash >>> 0).toString(36).toUpperCase().slice(0, 6)}`;
+  }
+
+  function createProgrammeCoverage() {
+    const capabilities = Engine.PROGRAMME_2026.flatMap(section => section.capabilities);
+    const formats = new Set(capabilities.flatMap(capability => capability.kinds));
+    dom.programmeSummary.textContent = `${capabilities.length} capacités reliées à ${formats.size} formats de questions générées, répartis entre ${Model.WORKSHOPS.length} ateliers.`;
+    dom.programmeGrid.innerHTML = Engine.PROGRAMME_2026.map(section => `
+      <section class="programme-section">
+        <h3>${section.title}</h3>
+        <ul>${section.capabilities.map(capability => `
+          <li><span class="coverage-check" aria-hidden="true">✓</span><div><strong>${capability.label}</strong><small>${capability.origin || "Première 2026"} · ${capability.skills.map(skill => Engine.SKILLS[skill]).join(" · ")}</small></div></li>
+        `).join("")}</ul>
+      </section>
+    `).join("");
+  }
+
+  function renderQuestionCanvases() {
+    dom.questionVisual.querySelectorAll("canvas[data-plot='line']").forEach(canvas => {
+      const width = Math.max(280, Math.min(620, Math.round(canvas.getBoundingClientRect().width || 520)));
+      const height = Math.round(Math.max(210, width * 0.48));
+      const ratio = Math.min(2, window.devicePixelRatio || 1);
+      canvas.width = width * ratio;
+      canvas.height = height * ratio;
+      canvas.style.height = `${height}px`;
+      const context = canvas.getContext("2d");
+      context.scale(ratio, ratio);
+      const margin = 28;
+      const xMin = -4;
+      const xMax = 4;
+      const yMin = -6;
+      const yMax = 6;
+      const px = x => margin + (x - xMin) / (xMax - xMin) * (width - margin * 2);
+      const py = y => height - margin - (y - yMin) / (yMax - yMin) * (height - margin * 2);
+      context.clearRect(0, 0, width, height);
+      context.fillStyle = "rgba(4, 20, 29, 0.78)";
+      context.fillRect(0, 0, width, height);
+      context.lineWidth = 1;
+      context.font = "10px system-ui, sans-serif";
+      context.textAlign = "center";
+      context.textBaseline = "top";
+      for (let x = xMin; x <= xMax; x += 1) {
+        context.strokeStyle = x === 0 ? "rgba(220, 246, 250, 0.62)" : "rgba(125, 196, 210, 0.13)";
+        context.beginPath();
+        context.moveTo(px(x), margin);
+        context.lineTo(px(x), height - margin);
+        context.stroke();
+        if (x !== 0) {
+          context.fillStyle = "rgba(190, 218, 225, 0.7)";
+          context.fillText(String(x), px(x), py(0) + 5);
+        }
+      }
+      context.textAlign = "right";
+      context.textBaseline = "middle";
+      for (let y = yMin; y <= yMax; y += 1) {
+        context.strokeStyle = y === 0 ? "rgba(220, 246, 250, 0.62)" : "rgba(125, 196, 210, 0.13)";
+        context.beginPath();
+        context.moveTo(margin, py(y));
+        context.lineTo(width - margin, py(y));
+        context.stroke();
+        if (y !== 0 && y % 2 === 0) {
+          context.fillStyle = "rgba(190, 218, 225, 0.7)";
+          context.fillText(String(y), px(0) - 5, py(y));
+        }
+      }
+      if (canvas.dataset.level !== undefined) {
+        const level = Number(canvas.dataset.level);
+        context.setLineDash([6, 5]);
+        context.strokeStyle = "rgba(255, 186, 107, 0.85)";
+        context.beginPath();
+        context.moveTo(margin, py(level));
+        context.lineTo(width - margin, py(level));
+        context.stroke();
+        context.setLineDash([]);
+      }
+      const slope = Number(canvas.dataset.slope);
+      const intercept = Number(canvas.dataset.intercept);
+      context.save();
+      context.beginPath();
+      context.rect(margin, margin, width - margin * 2, height - margin * 2);
+      context.clip();
+      context.lineWidth = 3;
+      context.strokeStyle = "#c47cff";
+      context.beginPath();
+      context.moveTo(px(xMin), py(slope * xMin + intercept));
+      context.lineTo(px(xMax), py(slope * xMax + intercept));
+      context.stroke();
+      context.restore();
+      context.fillStyle = "#66e4e7";
+      context.beginPath();
+      context.arc(px(0), py(intercept), 4, 0, Math.PI * 2);
+      context.fill();
+    });
   }
 
   function reportCurrentQuestion() {
@@ -538,6 +634,7 @@
     dom.reportQuestion.textContent = alreadyReported ? "Question signalée" : "Signaler après avoir répondu";
     dom.questionVisual.innerHTML = currentQuestion.visual || "";
     dom.questionVisual.hidden = !currentQuestion.visual;
+    renderQuestionCanvases();
     dom.feedback.hidden = true;
     dom.feedback.classList.remove("wrong");
     dom.eventNext.hidden = true;
@@ -910,6 +1007,7 @@
 
   dom.coreButton.addEventListener("click", clickCore);
   dom.helpButton.addEventListener("click", () => dom.helpDialog.showModal());
+  dom.programmeButton.addEventListener("click", () => dom.programmeDialog.showModal());
   dom.soundButton.addEventListener("click", () => {
     state.soundEnabled = !state.soundEnabled;
     updateSoundButton();
@@ -944,6 +1042,7 @@
   });
 
   installTouchGuards();
+  createProgrammeCoverage();
   createWorkshopCards();
   createCalibrationCards();
   updateSoundButton();

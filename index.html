@@ -13,7 +13,7 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png">
     <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
-    <link rel="stylesheet" href="styles.css?v=7">
+    <link rel="stylesheet" href="styles.css?v=8">
   </head>
   <body>
     <div class="ambient ambient-a"></div>
@@ -32,6 +32,7 @@
       </div>
       <div class="top-actions">
         <button class="icon-button" id="sound-button" type="button" aria-label="Désactiver les sons" aria-pressed="true">♪</button>
+        <button class="icon-button" id="programme-button" type="button" aria-label="Voir la couverture du programme 2026">✓</button>
         <button class="icon-button" id="help-button" type="button" aria-label="Ouvrir l'aide">?</button>
       </div>
     </header>
@@ -129,7 +130,7 @@
           <div><small>Effet temporaire</small><strong id="active-effect">Aucun</strong></div>
         </div>
         <div class="unlocked-box">
-          <div class="unlocked-head"><strong>Notions actives</strong><span id="unlocked-count">0/9</span></div>
+          <div class="unlocked-head"><strong>Notions actives</strong><span id="unlocked-count">0/12</span></div>
           <div id="unlocked-skills" class="unlocked-skills"><span class="empty-chip">Achète un atelier</span></div>
         </div>
         <p class="status-note">Les perturbations utilisent uniquement les notions dont tu possèdes au moins un atelier.</p>
@@ -207,6 +208,19 @@
       </form>
     </dialog>
 
+    <dialog id="programme-dialog">
+      <form method="dialog" class="dialog-card programme-dialog-card">
+        <button class="dialog-close" value="close" aria-label="Fermer">×</button>
+        <p class="eyebrow">Référence officielle</p>
+        <h2>Programme de première technologique 2026</h2>
+        <p id="programme-summary" class="programme-summary"></p>
+        <div id="programme-grid" class="programme-grid"></div>
+        <p class="dialog-note">La géométrie propre à la série STD2A est volontairement exclue. Les automatismes de seconde entretenus en première sont intégrés lorsqu'ils sont utiles à l'épreuve anticipée.</p>
+        <a class="official-link" href="https://www.education.gouv.fr/bo/2026/Hebdo14/MENE2602918A" target="_blank" rel="noopener">Consulter le Bulletin officiel du 2 avril 2026</a>
+        <button class="primary-button full-button" value="close">Retour au laboratoire</button>
+      </form>
+    </dialog>
+
     <dialog id="confirm-dialog">
       <form method="dialog" class="dialog-card compact-dialog">
         <p class="eyebrow" id="confirm-kicker">Confirmation</p>
@@ -221,8 +235,8 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-    <script src="question-engine.js?v=7"></script>
-    <script src="game-model.js?v=2"></script>
-    <script src="app.js?v=8"></script>
+    <script src="question-engine.js?v=8"></script>
+    <script src="game-model.js?v=3"></script>
+    <script src="app.js?v=9"></script>
   </body>
 </html>

@@ -6,15 +6,18 @@
   "use strict";
 
   const WORKSHOPS = [
-    { id: "proportions", name: "Répartiteur de proportions", icon: "∷", baseCost: 15, baseRate: 0.18, tier: 1, description: "Proportionnalité, ratios et part d'un total." },
+    { id: "proportions", name: "Répartiteur de proportions", icon: "∷", baseCost: 15, baseRate: 0.18, tier: 1, description: "Proportionnalité et rapport de quantités, rappel de seconde." },
+    { id: "numeric", name: "Calculateur numérique", icon: "10ⁿ", baseCost: 35, baseRate: 0.38, tier: 1.5, description: "Fractions, priorités, puissances et notation scientifique." },
     { id: "evolutions", name: "Convertisseur de pourcentages", icon: "%", baseCost: 80, baseRate: 0.9, tier: 2, description: "Pourcentages et évolutions successives." },
     { id: "units", name: "Calibrateur d'unités", icon: "↔", baseCost: 420, baseRate: 4.2, tier: 3, description: "Longueurs, durées et conversions." },
-    { id: "algebra", name: "Forge algébrique", icon: "x", baseCost: 2200, baseRate: 19, tier: 4, description: "Développer et résoudre des équations produits." },
-    { id: "functions", name: "Traceur de fonctions", icon: "ƒ", baseCost: 12000, baseRate: 86, tier: 5, description: "Images, coefficients directeurs et fonctions affines." },
-    { id: "sequences", name: "Séquenceur numérique", icon: "uₙ", baseCost: 68000, baseRate: 390, tier: 6, description: "Suites arithmétiques et géométriques." },
-    { id: "derivatives", name: "Dérivateur cinétique", icon: "f′", baseCost: 390000, baseRate: 1750, tier: 7, description: "Dérivation et variations." },
-    { id: "statistics", name: "Analyseur statistique", icon: "x̄", baseCost: 2300000, baseRate: 7900, tier: 8, description: "Moyennes et séries statistiques." },
-    { id: "probability", name: "Simulateur probabiliste", icon: "P", baseCost: 14000000, baseRate: 36000, tier: 9, description: "Probabilités conditionnelles et indépendance." }
+    { id: "logic", name: "Circuit logique", icon: "∩", baseCost: 950, baseRate: 8.5, tier: 3.5, description: "Ensembles, connecteurs, réciproques et contre-exemples." },
+    { id: "algebra", name: "Forge algébrique", icon: "x", baseCost: 2200, baseRate: 19, tier: 4, description: "Développer, factoriser, résoudre et étudier des signes." },
+    { id: "functions", name: "Traceur de fonctions", icon: "ƒ", baseCost: 12000, baseRate: 86, tier: 5, description: "Droites, lectures graphiques et polynômes du second degré." },
+    { id: "sequences", name: "Séquenceur numérique", icon: "uₙ", baseCost: 68000, baseRate: 390, tier: 6, description: "Suites explicites, récurrentes, variations et modèles." },
+    { id: "derivatives", name: "Dérivateur cinétique", icon: "f′", baseCost: 390000, baseRate: 1750, tier: 7, description: "Dérivées jusqu'au degré 3, tangentes et variations." },
+    { id: "statistics", name: "Analyseur statistique", icon: "x̄", baseCost: 2300000, baseRate: 7900, tier: 8, description: "Indicateurs, nuages de points et ajustements affines." },
+    { id: "probability", name: "Simulateur probabiliste", icon: "P", baseCost: 14000000, baseRate: 36000, tier: 9, description: "Conditionnement, Bernoulli et variables aléatoires." },
+    { id: "algorithmics", name: "Console algorithmique", icon: "</>", baseCost: 75000000, baseRate: 165000, tier: 10, description: "Python, listes, fonctions, données et tableur." }
   ];
 
   const MILESTONES = [10, 25, 50, 100, 200];

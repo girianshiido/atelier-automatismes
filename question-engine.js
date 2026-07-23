@@ -7,14 +7,17 @@
 
   const SKILLS = {
     proportions: "Proportions",
+    numeric: "Calcul numérique",
     evolutions: "Évolutions",
     units: "Unités",
+    logic: "Logique",
     algebra: "Calcul algébrique",
     functions: "Fonctions",
     sequences: "Suites",
     derivatives: "Dérivation",
     statistics: "Statistiques",
-    probability: "Probabilités"
+    probability: "Probabilités",
+    algorithmics: "Algorithmique"
   };
 
   function randInt(min, max, rng = Math.random) {
@@ -39,6 +42,31 @@
     return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: digits }).format(rounded);
   }
 
+  function gcd(a, b) {
+    let x = Math.abs(a);
+    let y = Math.abs(b);
+    while (y) [x, y] = [y, x % y];
+    return x || 1;
+  }
+
+  function fraction(numerator, denominator) {
+    const sign = denominator < 0 ? -1 : 1;
+    const divisor = gcd(numerator, denominator);
+    const n = sign * numerator / divisor;
+    const d = Math.abs(denominator) / divisor;
+    return d === 1 ? String(n) : `${n}/${d}`;
+  }
+
+  function superscript(value) {
+    const glyphs = { "-": "⁻", "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹" };
+    return String(value).split("").map(character => glyphs[character]).join("");
+  }
+
+  function subscript(value) {
+    const glyphs = { "-": "₋", "0": "₀", "1": "₁", "2": "₂", "3": "₃", "4": "₄", "5": "₅", "6": "₆", "7": "₇", "8": "₈", "9": "₉" };
+    return String(value).split("").map(character => glyphs[character]).join("");
+  }
+
   function canonicalChoice(value) {
     const normalized = String(value)
       .trim()
@@ -47,6 +75,8 @@
       .replace(/,/g, ".")
       .replace(/\s+/g, " ");
     const compact = normalized.replace(/\s/g, "");
+    const fractional = compact.match(/^([+-]?\d+)\/([+-]?\d+)$/);
+    if (fractional && Number(fractional[2]) !== 0) return `fraction:${fraction(Number(fractional[1]), Number(fractional[2]))}`;
     const solutionPair = compact.match(/^x=([+-]?\d+(?:\.\d+)?)oux=([+-]?\d+(?:\.\d+)?)$/);
     if (solutionPair) {
       return `solutions:${solutionPair.slice(1).map(Number).sort((a, b) => a - b).join("|")}`;
@@ -84,10 +114,18 @@
     });
     let bump = 1;
     while (unique.length < 4) {
-      const numeric = Number(String(correct).replace(",", "."));
-      const candidate = Number.isFinite(numeric)
-        ? String(numeric + bump)
-        : ["Aucune de ces réponses", "Impossible à déterminer", "Toutes les réponses"][bump - 1];
+      const source = String(correct);
+      const numeric = Number(source.replace(",", "."));
+      const embedded = source.match(/[+-]?\d+(?:[.,]\d+)?/);
+      let candidate;
+      if (Number.isFinite(numeric)) {
+        candidate = String(numeric + bump);
+      } else if (embedded) {
+        const changed = String(Number(embedded[0].replace(",", ".")) + bump).replace(".", embedded[0].includes(",") ? "," : ".");
+        candidate = `${source.slice(0, embedded.index)}${changed}${source.slice(embedded.index + embedded[0].length)}`;
+      } else {
+        candidate = bump === 1 ? `Ni ${source.toLowerCase()}` : bump === 2 ? `L'inverse de « ${source} »` : `Cas alternatif ${bump}`;
+      }
       if (candidate && !seen.has(canonicalChoice(candidate))) {
         seen.add(canonicalChoice(candidate));
         unique.push(candidate);
@@ -108,20 +146,202 @@
   }
 
   function affineExpression(a, b) {
-    if (b === 0) return `${a}x`;
-    return `${a}x ${b > 0 ? "+" : "−"} ${Math.abs(b)}`;
+    if (a === 0) return String(b);
+    const linearTerm = a === 1 ? "x" : a === -1 ? "−x" : `${a}x`;
+    if (b === 0) return linearTerm;
+    return `${linearTerm} ${b > 0 ? "+" : "−"} ${Math.abs(b)}`;
   }
 
   function polynomialExpression(a, b, c) {
-    const terms = [`${a}x²`];
+    const terms = [`${a === 1 ? "" : a === -1 ? "−" : a}x²`];
     if (b !== 0) terms.push(`${b > 0 ? "+" : "−"} ${Math.abs(b)}x`);
     if (c !== 0) terms.push(`${c > 0 ? "+" : "−"} ${Math.abs(c)}`);
+    return terms.join(" ");
+  }
+
+  function cubicExpression(a, b, c, d) {
+    const terms = [`${a === 1 ? "" : a === -1 ? "−" : a}x³`];
+    if (b !== 0) terms.push(`${b > 0 ? "+" : "−"} ${Math.abs(b)}x²`);
+    if (c !== 0) terms.push(`${c > 0 ? "+" : "−"} ${Math.abs(c)}x`);
+    if (d !== 0) terms.push(`${d > 0 ? "+" : "−"} ${Math.abs(d)}`);
     return terms.join(" ");
   }
 
   function linearFactor(constant) {
     if (constant === 0) return "x";
     return `(x ${constant > 0 ? "+" : "−"} ${Math.abs(constant)})`;
+  }
+
+  function fractionCalculation(rng) {
+    const denominator = pick([4, 5, 6, 8, 10, 12], rng);
+    const first = randInt(1, denominator - 1, rng);
+    const second = randInt(1, denominator - 1, rng);
+    const good = fraction(first + second, denominator);
+    const { choices, answer } = makeChoices(good, [
+      fraction(first + second, denominator * 2),
+      fraction(first * second, denominator),
+      fraction(Math.abs(first - second), denominator)
+    ], rng);
+    return {
+      kind: "fraction-calculation",
+      skill: "numeric",
+      prompt: `Calculer et simplifier : ${first}/${denominator} + ${second}/${denominator}.`,
+      choices, answer,
+      explanation: `Les dénominateurs sont identiques : (${first} + ${second})/${denominator} = ${good}.`
+    };
+  }
+
+  function operationPriority(rng) {
+    const a = randInt(2, 12, rng);
+    const b = randInt(2, 9, rng);
+    const c = randInt(2, 8, rng);
+    const good = a + b * c;
+    const { choices, answer } = makeChoices(good, [(a + b) * c, a * b + c, a + b + c], rng);
+    return {
+      kind: "operation-priority",
+      skill: "numeric",
+      prompt: `Calculer mentalement : ${a} + ${b} × ${c}.`,
+      choices, answer,
+      explanation: `La multiplication est prioritaire : ${b} × ${c} = ${b * c}, puis ${a} + ${b * c} = ${good}.`
+    };
+  }
+
+  function scientificNotation(rng) {
+    const coefficient = randInt(2, 9, rng);
+    const exponent = pick([-5, -4, -3, 3, 4, 5], rng);
+    const value = coefficient * 10 ** exponent;
+    const good = `${coefficient} × 10${superscript(exponent)}`;
+    const { choices, answer } = makeChoices(good, [
+      `${coefficient} × 10${superscript(exponent + (exponent > 0 ? -1 : 1))}`,
+      `${coefficient * 10} × 10${superscript(exponent)}`,
+      `${coefficient} × 10${superscript(-exponent)}`
+    ], rng);
+    return {
+      kind: "scientific-notation",
+      skill: "numeric",
+      prompt: `Écrire ${formatNumber(value, 8)} en notation scientifique.`,
+      choices, answer,
+      explanation: `La mantisse doit être comprise entre 1 et 10 : ${formatNumber(value, 8)} = ${good}.`
+    };
+  }
+
+  function powerRule(rng) {
+    const first = randInt(-4, 6, rng);
+    const second = randInt(-4, 6, rng);
+    const exponent = first + second;
+    const good = `10${superscript(exponent)}`;
+    const { choices, answer } = makeChoices(good, [
+      `10${superscript(first * second)}`,
+      `10${superscript(first - second)}`,
+      `20${superscript(exponent)}`
+    ], rng);
+    return {
+      kind: "power-rule",
+      skill: "numeric",
+      prompt: `Simplifier : 10${superscript(first)} × 10${superscript(second)}.`,
+      choices, answer,
+      explanation: `Pour des puissances de même base, on additionne les exposants : ${first} + (${second}) = ${exponent}.`
+    };
+  }
+
+  function setIntersection(rng) {
+    const common = shuffle([1, 2, 3, 4, 5, 6, 7, 8], rng).slice(0, 2).sort((a, b) => a - b);
+    const remaining = [1, 2, 3, 4, 5, 6, 7, 8].filter(value => !common.includes(value));
+    const onlyA = remaining.slice(0, 2);
+    const onlyB = remaining.slice(2, 4);
+    const setA = [...common, ...onlyA].sort((a, b) => a - b);
+    const setB = [...common, ...onlyB].sort((a, b) => a - b);
+    const writeSet = values => `{${values.join(" ; ")}}`;
+    const union = [...new Set([...setA, ...setB])].sort((a, b) => a - b);
+    const mode = pick(["intersection", "union", "cardinal"], rng);
+    const good = mode === "intersection" ? writeSet(common) : mode === "union" ? writeSet(union) : String(common.length);
+    const distractors = mode === "cardinal"
+      ? [setA.length, union.length, common.length + 1]
+      : [writeSet(setA), writeSet(setB), writeSet([...onlyA, ...onlyB].sort((a, b) => a - b))];
+    const { choices, answer } = makeChoices(good, distractors, rng);
+    return {
+      kind: "set-intersection",
+      skill: "logic",
+      prompt: `A = ${writeSet(setA)} et B = ${writeSet(setB)}. ${mode === "intersection" ? "Quel est l'ensemble A ∩ B ?" : mode === "union" ? "Quel est l'ensemble A ∪ B ?" : "Quelle est la valeur de Card(A ∩ B) ?"}`,
+      choices, answer,
+      explanation: mode === "union"
+        ? `A ∪ B rassemble tous les éléments appartenant à A ou à B : ${good}.`
+        : mode === "cardinal"
+          ? `A ∩ B contient ${common.join(" et ")}, soit ${good} éléments.`
+          : `A ∩ B contient uniquement les éléments communs aux deux ensembles : ${good}.`
+    };
+  }
+
+  function logicalCondition(rng) {
+    const thresholdA = randInt(3, 7, rng);
+    const thresholdB = randInt(8, 13, rng);
+    const useAnd = rng() < 0.5;
+    const candidates = [
+      [thresholdA + 1, thresholdB - 1],
+      [thresholdA - 1, thresholdB + 1],
+      [thresholdA - 1, thresholdB - 1],
+      [thresholdA + 1, thresholdB + 1]
+    ];
+    const satisfies = ([x, y]) => useAnd ? x > thresholdA && y < thresholdB : x > thresholdA || y < thresholdB;
+    const correctCandidates = candidates.filter(satisfies);
+    const selectedGood = useAnd ? correctCandidates[0] : candidates.find(candidate => satisfies(candidate) && candidate[0] <= thresholdA);
+    const good = `x = ${selectedGood[0]} et y = ${selectedGood[1]}`;
+    const distractors = candidates.filter(candidate => candidate !== selectedGood).map(candidate => `x = ${candidate[0]} et y = ${candidate[1]}`);
+    const { choices, answer } = makeChoices(good, distractors, rng);
+    return {
+      kind: "logical-condition",
+      skill: "logic",
+      prompt: useAnd
+        ? `Quelle paire vérifie la condition « x > ${thresholdA} ET y < ${thresholdB} » ?`
+        : `Quelle paire vérifie « x > ${thresholdA} OU y < ${thresholdB} » grâce uniquement à la condition sur y ?`,
+      choices, answer,
+      explanation: `${good} ${useAnd ? "vérifie simultanément les deux conditions" : "vérifie une seule des deux conditions, ce qui suffit avec OU"}.`
+    };
+  }
+
+  function reciprocalStatement(rng) {
+    const variant = pick([
+      {
+        statement: "Si un entier est divisible par 4, alors il est pair.",
+        reciprocal: "Si un entier est pair, alors il est divisible par 4.",
+        contrapositive: "Si un entier n'est pas pair, alors il n'est pas divisible par 4.",
+        other: "Si un entier est divisible par 2, alors il est impair."
+      },
+      {
+        statement: "Si x > 5, alors x > 2.",
+        reciprocal: "Si x > 2, alors x > 5.",
+        contrapositive: "Si x ≤ 2, alors x ≤ 5.",
+        other: "Si x < 5, alors x < 2."
+      }
+    ], rng);
+    const askReciprocal = rng() < 0.5;
+    const target = askReciprocal ? variant.reciprocal : variant.contrapositive;
+    const { choices, answer } = makeChoices(target, [variant.reciprocal, variant.contrapositive, variant.other, `${variant.statement} et sa réciproque sont équivalentes.`], rng);
+    return {
+      kind: "statement-reciprocal",
+      skill: "logic",
+      prompt: `Quelle est la ${askReciprocal ? "réciproque" : "contraposée"} de la proposition : « ${variant.statement} » ?`,
+      choices, answer,
+      explanation: askReciprocal
+        ? `La réciproque échange l'hypothèse et la conclusion : « ${variant.reciprocal} »`
+        : `La contraposée nie puis échange la conclusion et l'hypothèse : « ${variant.contrapositive} »`
+    };
+  }
+
+  function counterexample(rng) {
+    const variant = pick([
+      { statement: "Pour tout entier n, n² > n.", good: "n = 1", wrong: ["n = 2", "n = 3", "n = 4"], explanation: "Pour n = 1, on a 1² = 1, donc l'inégalité stricte est fausse." },
+      { statement: "Tout multiple de 3 est impair.", good: "n = 6", wrong: ["n = 3", "n = 9", "n = 15"], explanation: "6 est multiple de 3 mais il est pair." },
+      { statement: "Si x² = 9, alors x = 3.", good: "x = −3", wrong: ["x = 0", "x = 2", "x = 4"], explanation: "(−3)² = 9 mais −3 n'est pas égal à 3." }
+    ], rng);
+    const { choices, answer } = makeChoices(variant.good, variant.wrong, rng);
+    return {
+      kind: "counterexample",
+      skill: "logic",
+      prompt: `Quel contre-exemple suffit à infirmer la proposition « ${variant.statement} » ?`,
+      choices, answer,
+      explanation: variant.explanation
+    };
   }
 
   function proportionValue(rng) {
@@ -151,24 +371,22 @@
   }
 
   function ratioShare(rng) {
-    const ratioA = randInt(2, 5, rng);
-    const ratioB = randInt(2, 6, rng);
-    const multiplier = randInt(4, 15, rng);
-    const total = (ratioA + ratioB) * multiplier;
-    const askA = rng() < 0.5;
-    const good = (askA ? ratioA : ratioB) * multiplier;
-    const label = askA ? "A" : "B";
+    const factorValue = randInt(2, 6, rng);
+    const smaller = randInt(3, 15, rng);
+    const larger = factorValue * smaller;
+    const askLargerFirst = rng() < 0.5;
+    const good = askLargerFirst ? String(factorValue) : fraction(1, factorValue);
     const { choices, answer } = makeChoices(good, [
-      (askA ? ratioB : ratioA) * multiplier,
-      Math.round(total * (askA ? ratioA : ratioB) / 10),
-      good + multiplier
+      askLargerFirst ? fraction(1, factorValue) : String(factorValue),
+      String(larger - smaller),
+      fraction(larger + smaller, smaller)
     ], rng);
     return {
-      kind: "ratio-share",
+      kind: "ratio-comparison",
       skill: "proportions",
-      prompt: `Un stock de ${total} composants est partagé entre les lignes A et B selon le ratio ${ratioA}:${ratioB}. Combien de composants reçoit la ligne ${label} ?`,
+      prompt: `Une ligne produit ${larger} pièces et une autre ${smaller}. Quel est le rapport ${askLargerFirst ? `${larger}/${smaller}` : `${smaller}/${larger}`} ?`,
       choices, answer,
-      explanation: `Le ratio comporte ${ratioA + ratioB} parts de ${multiplier} composants. La ligne ${label} reçoit ${askA ? ratioA : ratioB} parts, soit ${good} composants.`
+      explanation: `${askLargerFirst ? larger : smaller} ÷ ${askLargerFirst ? smaller : larger} = ${good}. Ce rapport compare les deux quantités de manière multiplicative.`
     };
   }
 
@@ -276,6 +494,39 @@
     };
   }
 
+  function percentInitial(rng) {
+    const initial = pick([80, 100, 120, 160, 200, 240, 400, 500], rng);
+    const rate = pick([-25, -20, -10, 10, 20, 25, 50], rng);
+    const final = initial * (1 + rate / 100);
+    const { choices, answer } = makeChoices(initial, [final, initial + rate, Math.round(final / (1 - rate / 100))], rng);
+    return {
+      kind: "percent-initial",
+      skill: "evolutions",
+      prompt: `Après une évolution de ${rate >= 0 ? "+" : "−"}${Math.abs(rate)} %, une valeur vaut ${formatNumber(final)}. Quelle était sa valeur initiale ?`,
+      choices, answer,
+      explanation: `La valeur finale est égale à la valeur initiale multipliée par ${formatNumber(1 + rate / 100)}. Donc ${formatNumber(final)} ÷ ${formatNumber(1 + rate / 100)} = ${initial}.`
+    };
+  }
+
+  function reciprocalRate(rng) {
+    const rate = pick([-50, -25, -20, -10, 10, 20, 25, 50], rng);
+    const coefficient = 1 + rate / 100;
+    const reciprocal = (1 / coefficient - 1) * 100;
+    const good = `${reciprocal >= 0 ? "+" : "−"}${formatNumber(Math.abs(reciprocal), 1)} %`;
+    const { choices, answer } = makeChoices(good, [
+      `${rate >= 0 ? "−" : "+"}${Math.abs(rate)} %`,
+      `${reciprocal >= 0 ? "+" : "−"}${formatNumber(Math.abs(reciprocal) + 10, 1)} %`,
+      `${rate >= 0 ? "+" : "−"}${Math.abs(rate)} %`
+    ], rng);
+    return {
+      kind: "reciprocal-rate",
+      skill: "evolutions",
+      prompt: `Quel taux permet d'annuler exactement une évolution de ${rate >= 0 ? "+" : "−"}${Math.abs(rate)} % ?`,
+      choices, answer,
+      explanation: `Le coefficient réciproque est 1 ÷ ${formatNumber(coefficient)} = ${formatNumber(1 / coefficient, 3)}, soit un taux de ${good}.`
+    };
+  }
+
   function zeroProduct(rng) {
     let a = randInt(-6, 6, rng);
     let b = randInt(-6, 6, rng);
@@ -325,6 +576,64 @@
     };
   }
 
+  function factorExpression(rng) {
+    const factorValue = pick([2, 3, 4, 5, 6], rng);
+    const constant = randInt(2, 8, rng);
+    const good = `${factorValue}(x + ${constant})`;
+    const { choices, answer } = makeChoices(good, [
+      `${factorValue}(x + ${factorValue * constant})`,
+      `x(${factorValue} + ${factorValue * constant})`,
+      `${factorValue}x(x + ${constant})`
+    ], rng);
+    return {
+      kind: "factor-expression",
+      skill: "algebra",
+      prompt: `Factoriser : ${factorValue}x + ${factorValue * constant}.`,
+      choices, answer,
+      explanation: `${factorValue} est un facteur commun : ${factorValue}x + ${factorValue * constant} = ${good}.`
+    };
+  }
+
+  function linearSign(rng) {
+    const coefficient = pick([-5, -4, -3, -2, 2, 3, 4, 5], rng);
+    const root = randInt(-5, 5, rng);
+    const constant = -coefficient * root;
+    const expression = affineExpression(coefficient, constant);
+    const greater = coefficient > 0;
+    const good = `x ${greater ? ">" : "<"} ${root}`;
+    const { choices, answer } = makeChoices(good, [
+      `x ${greater ? "<" : ">"} ${root}`,
+      `x ${greater ? "≥" : "≤"} ${root}`,
+      `x ${greater ? ">" : "<"} ${-root}`
+    ], rng);
+    return {
+      kind: "linear-sign",
+      skill: "algebra",
+      prompt: `Pour quelles valeurs de x l'expression ${expression} est-elle strictement positive ?`,
+      choices, answer,
+      explanation: `${expression} s'annule en ${root}. Son coefficient directeur est ${coefficient > 0 ? "positif" : "négatif"}, donc l'expression est positive pour ${good}.`
+    };
+  }
+
+  function factorizedSign(rng) {
+    const firstRoot = randInt(-6, -1, rng);
+    const secondRoot = randInt(1, 6, rng);
+    const expression = `(x ${firstRoot < 0 ? "+" : "−"} ${Math.abs(firstRoot)})(x − ${secondRoot})`;
+    const good = `x < ${firstRoot} ou x > ${secondRoot}`;
+    const { choices, answer } = makeChoices(good, [
+      `${firstRoot} < x < ${secondRoot}`,
+      `x > ${firstRoot}`,
+      `x < ${secondRoot}`
+    ], rng);
+    return {
+      kind: "factorized-sign",
+      skill: "algebra",
+      prompt: `Quand l'expression ${expression} est-elle strictement positive ?`,
+      choices, answer,
+      explanation: `Le produit est positif à l'extérieur des deux racines ${firstRoot} et ${secondRoot} : ${good}.`
+    };
+  }
+
   function slopeFromPoints(rng) {
     const x1 = randInt(-3, 2, rng);
     const dx = pick([1, 2, 3], rng);
@@ -358,6 +667,126 @@
     };
   }
 
+  function graphLineEquation(rng) {
+    const slope = pick([-2, -1, 1, 2], rng);
+    const intercept = randInt(-2, 2, rng);
+    const good = `f(x) = ${affineExpression(slope, intercept)}`;
+    const { choices, answer } = makeChoices(good, [
+      `f(x) = ${affineExpression(-slope, intercept)}`,
+      `f(x) = ${affineExpression(slope, intercept + (intercept === 2 ? -1 : 1))}`,
+      `f(x) = ${affineExpression(slope + (slope > 0 ? 1 : -1), intercept)}`
+    ], rng);
+    return {
+      kind: "graph-line-equation",
+      skill: "functions",
+      prompt: "Quelle équation réduite correspond à la droite représentée ?",
+      choices, answer,
+      visual: `<canvas class="question-plot" data-plot="line" data-slope="${slope}" data-intercept="${intercept}" role="img" aria-label="Droite d'équation à déterminer dans un repère gradué"></canvas>`,
+      explanation: `La droite coupe l'axe des ordonnées en ${intercept} et avance de ${slope} verticalement quand x augmente de 1 : ${good}.`
+    };
+  }
+
+  function graphEquationReading(rng) {
+    const slope = pick([-2, -1, 1, 2], rng);
+    const intercept = randInt(-2, 2, rng);
+    const solution = randInt(-3, 3, rng);
+    const level = slope * solution + intercept;
+    const { choices, answer } = makeChoices(solution, [-solution, solution + 1, level], rng);
+    return {
+      kind: "graph-equation-reading",
+      skill: "functions",
+      prompt: `À l'aide du graphique, résoudre f(x) = ${level}.`,
+      choices, answer,
+      visual: `<canvas class="question-plot" data-plot="line" data-slope="${slope}" data-intercept="${intercept}" data-level="${level}" role="img" aria-label="Graphique d'une fonction affine et niveau horizontal ${level}"></canvas>`,
+      explanation: `La droite horizontale d'ordonnée ${level} rencontre la courbe au point d'abscisse ${solution}.`
+    };
+  }
+
+  function graphSign(rng) {
+    const slope = pick([-2, -1, 1, 2], rng);
+    const root = randInt(-3, 3, rng);
+    const intercept = -slope * root;
+    const good = `x ${slope > 0 ? ">" : "<"} ${root}`;
+    const { choices, answer } = makeChoices(good, [
+      `x ${slope > 0 ? "<" : ">"} ${root}`,
+      `x ${slope > 0 ? "≥" : "≤"} ${root}`,
+      `x ${slope > 0 ? ">" : "<"} ${-root}`
+    ], rng);
+    return {
+      kind: "graph-sign-reading",
+      skill: "functions",
+      prompt: "Pour quelles valeurs de x la fonction représentée est-elle strictement positive ?",
+      choices, answer,
+      visual: `<canvas class="question-plot" data-plot="line" data-slope="${slope}" data-intercept="${intercept}" role="img" aria-label="Graphique d'une fonction affine dans un repère gradué"></canvas>`,
+      explanation: `La courbe coupe l'axe des abscisses en ${root} et se trouve au-dessus de cet axe pour ${good}.`
+    };
+  }
+
+  function quadraticVertex(rng) {
+    const coefficient = pick([-2, -1, 1, 2], rng);
+    const abscissa = randInt(-4, 4, rng);
+    const ordinate = randInt(-5, 5, rng);
+    const shifted = abscissa === 0 ? "x" : `(x ${abscissa > 0 ? "−" : "+"} ${Math.abs(abscissa)})`;
+    const leading = coefficient === 1 ? "" : coefficient === -1 ? "−" : String(coefficient);
+    const expression = `${leading}${shifted}²${ordinate === 0 ? "" : ` ${ordinate > 0 ? "+" : "−"} ${Math.abs(ordinate)}`}`;
+    const good = `S(${abscissa} ; ${ordinate})`;
+    const { choices, answer } = makeChoices(good, [
+      `S(${-abscissa} ; ${ordinate})`,
+      `S(${abscissa} ; ${-ordinate})`,
+      `S(${ordinate} ; ${abscissa})`
+    ], rng);
+    return {
+      kind: "quadratic-vertex",
+      skill: "functions",
+      prompt: `Quel est le sommet de la parabole représentant f(x) = ${expression} ?`,
+      choices, answer,
+      explanation: `La forme ${coefficient}(x − ${abscissa})² + ${ordinate} donne directement le sommet ${good}.`
+    };
+  }
+
+  function quadraticRoots(rng) {
+    const firstRoot = randInt(-6, -1, rng);
+    const secondRoot = randInt(1, 6, rng);
+    const coefficient = pick([-2, -1, 1, 2], rng);
+    const expression = `${coefficient === 1 ? "" : coefficient === -1 ? "−" : coefficient}${linearFactor(-firstRoot)}${linearFactor(-secondRoot)}`;
+    const good = `x = ${firstRoot} ou x = ${secondRoot}`;
+    const { choices, answer } = makeChoices(good, [
+      `x = ${-firstRoot} ou x = ${-secondRoot}`,
+      `x = ${firstRoot + 1} ou x = ${secondRoot}`,
+      `x = ${firstRoot * secondRoot}`
+    ], rng);
+    return {
+      kind: "quadratic-roots",
+      skill: "functions",
+      prompt: `Quelles sont les racines de f(x) = ${expression} ?`,
+      choices, answer,
+      explanation: `Chaque facteur s'annule pour l'une des deux valeurs : ${good}. Aucun discriminant n'est nécessaire.`
+    };
+  }
+
+  function variationTable(rng) {
+    const vertex = randInt(-3, 3, rng);
+    const minimum = rng() < 0.5;
+    const leftValue = randInt(5, 12, rng);
+    const centerValue = minimum ? randInt(-4, 2, rng) : leftValue;
+    const edgeValue = minimum ? leftValue : randInt(-4, 2, rng);
+    const values = minimum ? [leftValue, centerValue, leftValue + 2] : [edgeValue, leftValue, edgeValue - 2];
+    const good = minimum ? `]−∞ ; ${vertex}]` : `[${vertex} ; +∞[`;
+    const { choices, answer } = makeChoices(good, [
+      minimum ? `[${vertex} ; +∞[` : `]−∞ ; ${vertex}]`,
+      "Sur ℝ tout entier",
+      "Sur aucun intervalle"
+    ], rng);
+    return {
+      kind: "variation-reading",
+      skill: "functions",
+      prompt: "Sur quel intervalle la fonction est-elle décroissante d'après ce tableau de variations ?",
+      choices, answer,
+      visual: `<table aria-label="Tableau de variations"><tr><th>x</th><td>−∞</td><td>${vertex}</td><td>+∞</td></tr><tr><th>f(x)</th><td>${values[0]}</td><td>${minimum ? "↘ " : "↗ "}${values[1]}${minimum ? " ↗" : " ↘"}</td><td>${values[2]}</td></tr></table>`,
+      explanation: `Les flèches montrent que f décroît sur ${good}.`
+    };
+  }
+
   function nextSequence(rng) {
     const geometric = rng() > 0.5;
     if (geometric) {
@@ -376,6 +805,86 @@
     return { kind: "arithmetic-sequence", skill: "sequences", prompt: `Compléter la suite arithmétique : ${values.join(" ; ")} ; …`, choices, answer, explanation: `On ajoute ${r} à chaque terme. Le terme suivant vaut ${values[3]} ${r >= 0 ? "+" : "−"} ${Math.abs(r)} = ${good}.` };
   }
 
+  function explicitSequenceTerm(rng) {
+    const geometric = rng() < 0.5;
+    const rank = randInt(3, 7, rng);
+    if (geometric) {
+      const start = randInt(1, 4, rng);
+      const ratio = pick([2, 3], rng);
+      const good = start * ratio ** rank;
+      const { choices, answer } = makeChoices(good, [start * ratio * rank, start + ratio ** rank, start * ratio ** (rank - 1)], rng);
+      return {
+        kind: "explicit-sequence-term",
+        skill: "sequences",
+        prompt: `La suite est définie par uₙ = ${start} × ${ratio}ⁿ. Calculer u${subscript(rank)}.`,
+        choices, answer,
+        explanation: `u${subscript(rank)} = ${start} × ${ratio}${superscript(rank)} = ${good}.`
+      };
+    }
+    const start = randInt(-5, 8, rng);
+    const step = pick([-4, -3, 2, 3, 5], rng);
+    const good = start + step * rank;
+    const { choices, answer } = makeChoices(good, [start + step * (rank - 1), (start + step) * rank, start + step + rank], rng);
+    return {
+      kind: "explicit-sequence-term",
+      skill: "sequences",
+      prompt: `La suite est définie par uₙ = ${start} ${step >= 0 ? "+" : "−"} ${Math.abs(step)}n. Calculer u${subscript(rank)}.`,
+      choices, answer,
+      explanation: `On remplace n par ${rank} : ${start} ${step >= 0 ? "+" : "−"} ${Math.abs(step)} × ${rank} = ${good}.`
+    };
+  }
+
+  function recurrentSequenceTerm(rng) {
+    const start = randInt(1, 8, rng);
+    const step = pick([-3, -2, 2, 3, 4], rng);
+    const rank = randInt(3, 6, rng);
+    const good = start + rank * step;
+    const { choices, answer } = makeChoices(good, [start + (rank - 1) * step, start + (rank + 1) * step, start * step * rank], rng);
+    return {
+      kind: "recurrent-sequence-term",
+      skill: "sequences",
+      prompt: `On a u₀ = ${start} et uₙ₊₁ = uₙ ${step >= 0 ? "+" : "−"} ${Math.abs(step)}. Calculer u${subscript(rank)}.`,
+      choices, answer,
+      explanation: `Entre u₀ et u${subscript(rank)}, on ajoute ${step} exactement ${rank} fois : ${start} ${step >= 0 ? "+" : "−"} ${rank * Math.abs(step)} = ${good}.`
+    };
+  }
+
+  function sequenceNature(rng) {
+    const geometric = rng() < 0.5;
+    const start = randInt(1, 5, rng);
+    const reason = geometric ? pick([2, 3, 4], rng) : pick([2, 3, 5, 7], rng);
+    const values = Array.from({ length: 4 }, (_, index) => geometric ? start * reason ** index : start + reason * index);
+    const good = geometric ? `Géométrique de raison ${reason}` : `Arithmétique de raison ${reason}`;
+    const { choices, answer } = makeChoices(good, [
+      geometric ? `Arithmétique de raison ${reason}` : `Géométrique de raison ${reason}`,
+      geometric ? `Géométrique de raison ${reason + 1}` : `Arithmétique de raison ${reason + 1}`,
+      "Ni arithmétique ni géométrique"
+    ], rng);
+    return {
+      kind: "sequence-nature",
+      skill: "sequences",
+      prompt: `Identifier la nature de la suite : ${values.join(" ; ")} ; …`,
+      choices, answer,
+      explanation: geometric
+        ? `Chaque terme est obtenu en multipliant le précédent par ${reason}.`
+        : `La différence entre deux termes consécutifs vaut toujours ${reason}.`
+    };
+  }
+
+  function sequenceVariation(rng) {
+    const geometric = rng() < 0.5;
+    if (geometric) {
+      const ratio = pick([0.5, 0.8, 1.2, 1.5, 2], rng);
+      const good = ratio > 1 ? "Strictement croissante" : "Strictement décroissante";
+      const { choices, answer } = makeChoices(good, [good === "Strictement croissante" ? "Strictement décroissante" : "Strictement croissante", "Constante", "On ne peut pas savoir"], rng);
+      return { kind: "sequence-variation", skill: "sequences", prompt: `Une suite géométrique à termes strictement positifs a pour raison q = ${formatNumber(ratio)}. Quel est son sens de variation ?`, choices, answer, explanation: `Comme q est ${ratio > 1 ? "supérieur" : "compris entre 0 et"} 1, la suite est ${good.toLowerCase()}.` };
+    }
+    const reason = pick([-5, -3, 2, 4, 7], rng);
+    const good = reason > 0 ? "Strictement croissante" : "Strictement décroissante";
+    const { choices, answer } = makeChoices(good, [good === "Strictement croissante" ? "Strictement décroissante" : "Strictement croissante", "Constante", "On ne peut pas savoir"], rng);
+    return { kind: "sequence-variation", skill: "sequences", prompt: `Une suite arithmétique a pour raison r = ${reason}. Quel est son sens de variation ?`, choices, answer, explanation: `Le signe de la raison donne le sens de variation : r est ${reason > 0 ? "positif" : "négatif"}, donc la suite est ${good.toLowerCase()}.` };
+  }
+
   function derivativePolynomial(rng) {
     const a = pick([-4, -3, -2, 2, 3, 4], rng);
     const b = randInt(-6, 6, rng);
@@ -390,12 +899,133 @@
     return { kind: "polynomial-derivative", skill: "derivatives", prompt: `Soit f(x) = ${expression}. Quelle est sa fonction dérivée ?`, choices, answer, explanation: `La dérivée de ax² + bx + c est 2ax + b. Donc f′(x) = ${good}.` };
   }
 
+  function cubicDerivative(rng) {
+    const a = pick([-3, -2, -1, 1, 2, 3], rng);
+    const b = pick([-4, -3, -2, 2, 3, 4], rng);
+    const c = randInt(-6, 6, rng);
+    const d = randInt(-8, 8, rng);
+    const expression = cubicExpression(a, b, c, d);
+    const good = polynomialExpression(3 * a, 2 * b, c);
+    const { choices, answer } = makeChoices(good, [
+      polynomialExpression(a, 2 * b, c),
+      polynomialExpression(3 * a, b, d),
+      cubicExpression(3 * a, 2 * b, c, 0)
+    ], rng);
+    return {
+      kind: "cubic-derivative",
+      skill: "derivatives",
+      prompt: `Soit f(x) = ${expression}. Quelle est sa fonction dérivée ?`,
+      choices, answer,
+      explanation: `On dérive terme à terme : (ax³)' = 3ax², (bx²)' = 2bx et la constante disparaît. Ainsi f′(x) = ${good}.`
+    };
+  }
+
+  function tangentEquation(rng) {
+    const a = pick([-2, -1, 1, 2], rng);
+    const b = randInt(-4, 4, rng);
+    const c = randInt(-5, 5, rng);
+    const x0 = randInt(-3, 3, rng);
+    const y0 = a * x0 ** 2 + b * x0 + c;
+    const slope = 2 * a * x0 + b;
+    const intercept = y0 - slope * x0;
+    const good = `y = ${affineExpression(slope, intercept)}`;
+    const { choices, answer } = makeChoices(good, [
+      `y = ${affineExpression(-slope, intercept)}`,
+      `y = ${affineExpression(slope, y0)}`,
+      `y = ${affineExpression(2 * a, c)}`
+    ], rng);
+    return {
+      kind: "tangent-equation",
+      skill: "derivatives",
+      prompt: `Pour f(x) = ${polynomialExpression(a, b, c)}, déterminer l'équation de la tangente au point d'abscisse ${x0}.`,
+      choices, answer,
+      explanation: `f′(${x0}) = ${slope} et f(${x0}) = ${y0}. La tangente vérifie y = ${slope}(x − ${x0}) + ${y0}, soit ${good}.`
+    };
+  }
+
+  function derivativeVariation(rng) {
+    const coefficient = pick([-4, -3, -2, 2, 3, 4], rng);
+    const root = randInt(-4, 4, rng);
+    const derivative = `${coefficient}${linearFactor(-root)}`;
+    const good = coefficient > 0
+      ? `Décroissante sur ]−∞ ; ${root}] puis croissante sur [${root} ; +∞[`
+      : `Croissante sur ]−∞ ; ${root}] puis décroissante sur [${root} ; +∞[`;
+    const { choices, answer } = makeChoices(good, [
+      coefficient > 0
+        ? `Croissante sur ]−∞ ; ${root}] puis décroissante sur [${root} ; +∞[`
+        : `Décroissante sur ]−∞ ; ${root}] puis croissante sur [${root} ; +∞[`,
+      "Croissante sur ℝ",
+      "Décroissante sur ℝ"
+    ], rng);
+    return {
+      kind: "derivative-variation",
+      skill: "derivatives",
+      prompt: `On sait que f′(x) = ${derivative}. Quelles sont les variations de f ?`,
+      choices, answer,
+      explanation: `La dérivée s'annule en ${root} et change de signe à cette valeur. On obtient : ${good.toLowerCase()}.`
+    };
+  }
+
   function meanSeries(rng) {
     const values = Array.from({ length: 4 }, () => randInt(4, 18, rng));
     const sum = values.reduce((a, b) => a + b, 0);
     const mean = sum / values.length;
     const { choices, answer } = makeChoices(formatNumber(mean), [formatNumber(sum / 5), formatNumber(mean + 1), formatNumber(values.sort((a,b)=>a-b)[1])], rng);
     return { kind: "series-mean", skill: "statistics", prompt: `Quelle est la moyenne de la série : ${values.join(" ; ")} ?`, choices, answer, explanation: `La somme vaut ${sum}. La moyenne est ${sum} ÷ 4 = ${formatNumber(mean)}.` };
+  }
+
+  function histogramReading(rng) {
+    const values = Array.from({ length: 4 }, () => randInt(3, 12, rng));
+    const labels = ["A", "B", "C", "D"];
+    const good = values.reduce((sum, value) => sum + value, 0);
+    const { choices, answer } = makeChoices(good, [Math.max(...values), Math.round(good / 4), good - values[0]], rng);
+    const maximum = Math.max(...values);
+    return {
+      kind: "histogram-reading",
+      skill: "statistics",
+      prompt: "Combien d'éléments sont représentés au total par ce diagramme en barres ?",
+      choices, answer,
+      visual: `<div class="mini-bars" role="img" aria-label="Diagramme en barres : ${values.map((value, index) => `${labels[index]} ${value}`).join(", ")}">${values.map((value, index) => `<div><span style="--bar-height:${Math.round(value / maximum * 100)}%"><b>${value}</b></span><small>${labels[index]}</small></div>`).join("")}</div>`,
+      explanation: `On additionne les quatre effectifs : ${values.join(" + ")} = ${good}.`
+    };
+  }
+
+  function meanPoint(rng) {
+    const meanX = randInt(-2, 6, rng);
+    const meanY = randInt(2, 12, rng);
+    const points = [[meanX - 3, meanY - 1], [meanX - 1, meanY + 2], [meanX + 1, meanY - 2], [meanX + 3, meanY + 1]];
+    const good = `G(${meanX} ; ${meanY})`;
+    const { choices, answer } = makeChoices(good, [
+      `G(${meanY} ; ${meanX})`,
+      `G(${meanX + 1} ; ${meanY})`,
+      `G(${meanX} ; ${meanY + 1})`
+    ], rng);
+    return {
+      kind: "bivariate-mean-point",
+      skill: "statistics",
+      prompt: `Quel est le point moyen du nuage constitué des points ${points.map(([x, y]) => `(${x} ; ${y})`).join(", ")} ?`,
+      choices, answer,
+      explanation: `La moyenne des abscisses vaut ${meanX} et celle des ordonnées vaut ${meanY}. Le point moyen est ${good}.`
+    };
+  }
+
+  function affineAdjustment(rng) {
+    const slope = pick([1, 2, 3, 4], rng);
+    const intercept = randInt(-4, 8, rng);
+    const input = randInt(5, 15, rng);
+    const good = slope * input + intercept;
+    const { choices, answer } = makeChoices(formatNumber(good), [
+      formatNumber(slope + input + intercept),
+      formatNumber(slope * (input + intercept)),
+      formatNumber(good + slope)
+    ], rng);
+    return {
+      kind: "affine-adjustment",
+      skill: "statistics",
+      prompt: `Un ajustement affine d'un nuage est donné par y = ${affineExpression(slope, intercept)}. Quelle valeur estime-t-il pour x = ${input} ?`,
+      choices, answer,
+      explanation: `On remplace x par ${input} : y = ${formatNumber(slope)} × ${input}${intercept === 0 ? "" : ` ${intercept > 0 ? "+" : "−"} ${Math.abs(intercept)}`} = ${formatNumber(good)}.`
+    };
   }
 
   function conditionalProbability(rng) {
@@ -453,23 +1083,290 @@
     return { kind: "independent-events", skill: "probability", prompt: `Les événements A et B sont indépendants, avec P(A) = ${formatNumber(pA)} et P(B) = ${formatNumber(pB)}. Calculer P(A ∩ B).`, choices, answer, explanation: `Pour des événements indépendants, P(A ∩ B) = P(A) × P(B) = ${formatNumber(pA)} × ${formatNumber(pB)} = ${formatNumber(good, 2)}.` };
   }
 
+  function totalProbability(rng) {
+    const pA = pick([0.2, 0.3, 0.4, 0.6, 0.7], rng);
+    const pGivenA = pick([0.2, 0.4, 0.5, 0.7, 0.8], rng);
+    const pGivenNotA = pick([0.1, 0.3, 0.5, 0.6], rng);
+    const good = pA * pGivenA + (1 - pA) * pGivenNotA;
+    const { choices, answer } = makeChoices(formatNumber(good, 2), [
+      formatNumber(pA * pGivenA, 2),
+      formatNumber(pGivenA + pGivenNotA, 2),
+      formatNumber(1 - good, 2)
+    ], rng);
+    return {
+      kind: "total-probability",
+      skill: "probability",
+      prompt: `P(A) = ${formatNumber(pA)}, P(B | A) = ${formatNumber(pGivenA)} et P(B | Ā) = ${formatNumber(pGivenNotA)}. Calculer P(B).`,
+      choices, answer,
+      explanation: `P(B) = P(A)P(B | A) + P(Ā)P(B | Ā) = ${formatNumber(pA)} × ${formatNumber(pGivenA)} + ${formatNumber(1 - pA)} × ${formatNumber(pGivenNotA)} = ${formatNumber(good, 2)}.`
+    };
+  }
+
+  function bernoulliRepetition(rng) {
+    const probability = pick([0.2, 0.3, 0.4, 0.5, 0.6, 0.8], rng);
+    const repetitions = randInt(2, 4, rng);
+    const askSuccesses = rng() < 0.5;
+    const base = askSuccesses ? probability : 1 - probability;
+    const good = base ** repetitions;
+    const { choices, answer } = makeChoices(formatNumber(good, 4), [
+      formatNumber(base * repetitions, 4),
+      formatNumber(1 - good, 4),
+      formatNumber(probability * (1 - probability), 4)
+    ], rng);
+    return {
+      kind: "bernoulli-repetition",
+      skill: "probability",
+      prompt: `Une épreuve de Bernoulli de probabilité de succès p = ${formatNumber(probability)} est répétée ${repetitions} fois indépendamment. Quelle est la probabilité de n'obtenir ${askSuccesses ? "que des succès" : "aucun succès"} ?`,
+      choices, answer,
+      explanation: `Les épreuves sont indépendantes : on multiplie ${formatNumber(base)} par lui-même ${repetitions} fois, soit ${formatNumber(good, 4)}.`
+    };
+  }
+
+  function randomExpectation(rng) {
+    const p0 = pick([0.2, 0.3, 0.4], rng);
+    const p1 = pick([0.2, 0.3, 0.4], rng);
+    const p2 = Math.round((1 - p0 - p1) * 10) / 10;
+    if (p2 <= 0) return randomExpectation(rng);
+    const values = [0, 2, 5];
+    const expectation = values[1] * p1 + values[2] * p2;
+    const { choices, answer } = makeChoices(formatNumber(expectation, 2), [
+      formatNumber((values[0] + values[1] + values[2]) / 3, 2),
+      formatNumber(p1 + p2, 2),
+      formatNumber(expectation + 1, 2)
+    ], rng);
+    return {
+      kind: "random-expectation",
+      skill: "probability",
+      prompt: "Calculer l'espérance de la variable aléatoire X donnée par cette loi.",
+      choices, answer,
+      visual: `<table aria-label="Loi de probabilité de X"><tr><th>x</th>${values.map(value => `<td>${value}</td>`).join("")}</tr><tr><th>P(X = x)</th><td>${formatNumber(p0)}</td><td>${formatNumber(p1)}</td><td>${formatNumber(p2)}</td></tr></table>`,
+      explanation: `E(X) = 0 × ${formatNumber(p0)} + 2 × ${formatNumber(p1)} + 5 × ${formatNumber(p2)} = ${formatNumber(expectation, 2)}.`
+    };
+  }
+
+  function randomEvent(rng) {
+    const p0 = pick([0.1, 0.2, 0.3], rng);
+    const p1 = pick([0.2, 0.3, 0.4], rng);
+    const p2 = Math.round((1 - p0 - p1) * 10) / 10;
+    const good = p0 + p1;
+    const { choices, answer } = makeChoices(formatNumber(good, 2), [formatNumber(p1, 2), formatNumber(p2, 2), formatNumber(1 - good, 2)], rng);
+    return {
+      kind: "random-event",
+      skill: "probability",
+      prompt: "D'après cette loi, calculer P(X ≤ 1).",
+      choices, answer,
+      visual: `<table aria-label="Loi de probabilité de X"><tr><th>x</th><td>0</td><td>1</td><td>2</td></tr><tr><th>P(X = x)</th><td>${formatNumber(p0)}</td><td>${formatNumber(p1)}</td><td>${formatNumber(p2)}</td></tr></table>`,
+      explanation: `L'événement X ≤ 1 regroupe X = 0 et X = 1 : ${formatNumber(p0)} + ${formatNumber(p1)} = ${formatNumber(good, 2)}.`
+    };
+  }
+
+  function pythonAccumulator(rng) {
+    const limit = randInt(4, 8, rng);
+    const good = limit * (limit + 1) / 2;
+    const { choices, answer } = makeChoices(good, [limit ** 2, good - limit, good + 1], rng);
+    return {
+      kind: "python-accumulator",
+      skill: "algorithmics",
+      prompt: "Quelle valeur ce programme affiche-t-il ?",
+      choices, answer,
+      visual: `<pre class="code-panel" aria-label="Programme Python">total = 0\nfor n in range(1, ${limit + 1}):\n    total = total + n\nprint(total)</pre>`,
+      explanation: `L'accumulateur additionne les entiers de 1 à ${limit} : ${Array.from({ length: limit }, (_, index) => index + 1).join(" + ")} = ${good}.`
+    };
+  }
+
+  function pythonList(rng) {
+    const limit = randInt(7, 12, rng);
+    const values = Array.from({ length: limit - 1 }, (_, index) => index + 1).filter(value => value % 2 === 0);
+    const good = `[${values.join(", ")}]`;
+    const { choices, answer } = makeChoices(good, [
+      `[${values.map(value => value - 1).join(", ")}]`,
+      `[${[...values, limit % 2 === 0 ? limit : limit + 1].join(", ")}]`,
+      `[${Array.from({ length: limit }, (_, index) => index + 1).join(", ")}]`
+    ], rng);
+    return {
+      kind: "python-list",
+      skill: "algorithmics",
+      prompt: "Quelle liste est créée par cette instruction Python ?",
+      choices, answer,
+      visual: `<pre class="code-panel" aria-label="Instruction Python">valeurs = [n for n in range(1, ${limit}) if n % 2 == 0]</pre>`,
+      explanation: `La compréhension conserve les entiers pairs de 1 inclus à ${limit} exclu : ${good}.`
+    };
+  }
+
+  function pythonFunction(rng) {
+    const power = randInt(2, 8, rng);
+    const duration = randInt(2, 6, rng);
+    const offset = randInt(1, 5, rng);
+    const good = power * duration + offset;
+    const { choices, answer } = makeChoices(good, [power + duration + offset, power * (duration + offset), power * duration], rng);
+    return {
+      kind: "python-function",
+      skill: "algorithmics",
+      prompt: `Quelle valeur renvoie energie(${power}, ${duration}) ?`,
+      choices, answer,
+      visual: `<pre class="code-panel" aria-label="Fonction Python">def energie(puissance, duree):\n    resultat = puissance * duree + ${offset}\n    return resultat</pre>`,
+      explanation: `Les entrées sont puissance = ${power} et duree = ${duration}. La sortie vaut ${power} × ${duration} + ${offset} = ${good}.`
+    };
+  }
+
+  function spreadsheetFormula(rng) {
+    const row = randInt(2, 6, rng);
+    const good = `=B${row}*C${row}`;
+    const { choices, answer } = makeChoices(good, [`=B${row}+C${row}`, `=B${row - 1}*C${row - 1}`, `B${row}*C${row}`], rng);
+    return {
+      kind: "spreadsheet-formula",
+      skill: "algorithmics",
+      prompt: `Dans un tableur, la colonne B contient une quantité et la colonne C un prix unitaire. Quelle formule calcule le coût total à la ligne ${row} ?`,
+      choices, answer,
+      explanation: `Une formule commence par = et multiplie les deux cellules de la même ligne : ${good}.`
+    };
+  }
+
+  function dataFilter(rng) {
+    const threshold = randInt(50, 80, rng);
+    const values = [threshold - 15, threshold + 5, threshold + 18, threshold - 2, threshold + 11];
+    const good = values.filter(value => value >= threshold).length;
+    const { choices, answer } = makeChoices(good, [good - 1, good + 1, values.length], rng);
+    return {
+      kind: "data-filter",
+      skill: "algorithmics",
+      prompt: `On filtre les mesures supérieures ou égales à ${threshold}. Combien de lignes seront conservées ?`,
+      choices, answer,
+      visual: `<table aria-label="Données brutes"><tr><th>Capteur</th>${values.map((_, index) => `<td>C${index + 1}</td>`).join("")}</tr><tr><th>Mesure</th>${values.map(value => `<td>${value}</td>`).join("")}</tr></table>`,
+      explanation: `${values.filter(value => value >= threshold).join(", ")} sont supérieures ou égales à ${threshold}, soit ${good} lignes.`
+    };
+  }
+
+  function pythonBernoulli(rng) {
+    const probability = pick([0.2, 0.3, 0.4, 0.6, 0.8], rng);
+    const pythonProbability = String(probability);
+    const good = `random() < ${pythonProbability}`;
+    const { choices, answer } = makeChoices(good, [
+      `random() > ${pythonProbability}`,
+      `random() == ${pythonProbability}`,
+      `random() < ${String(Math.round((1 - probability) * 10) / 10)}`
+    ], rng);
+    return {
+      kind: "python-bernoulli",
+      skill: "algorithmics",
+      prompt: `Quelle condition Python simule un succès de probabilité ${formatNumber(probability)} avec random(), qui renvoie un réel uniforme entre 0 et 1 ?`,
+      choices, answer,
+      explanation: `L'intervalle [0 ; ${formatNumber(probability)}[ occupe une proportion ${formatNumber(probability)} de [0 ; 1[ : la condition correcte est ${good}.`
+    };
+  }
+
+  function rawDataCrossTable(rng) {
+    const rows = shuffle([
+      ["A", "Conforme"], ["A", "Conforme"], ["A", "Non conforme"],
+      ["B", "Conforme"], ["B", "Non conforme"], ["B", "Non conforme"]
+    ], rng);
+    const askLine = rng() < 0.5 ? "A" : "B";
+    const askStatus = rng() < 0.5 ? "Conforme" : "Non conforme";
+    const good = rows.filter(([line, status]) => line === askLine && status === askStatus).length;
+    const { choices, answer } = makeChoices(good, [good + 1, Math.max(0, good - 1), rows.filter(([line]) => line === askLine).length], rng);
+    return {
+      kind: "raw-data-cross-table",
+      skill: "algorithmics",
+      prompt: `Dans un tableau croisé « ligne × conformité », quel effectif placer dans la case Ligne ${askLine} / ${askStatus} ?`,
+      choices, answer,
+      visual: `<table aria-label="Données brutes à croiser"><tr><th>Pièce</th><th>Ligne</th><th>Contrôle</th></tr>${rows.map(([line, status], index) => `<tr><td>${index + 1}</td><td>${line}</td><td>${status}</td></tr>`).join("")}</table>`,
+      explanation: `On compte les lignes vérifiant simultanément les deux critères : il y en a ${good}.`
+    };
+  }
+
   const GENERATORS = {
-    energy: [proportionValue, ratioShare, percentFinal, percentRate, successiveRates, metricConversion, durationConversion, functionImage],
-    factory: [zeroProduct, developExpression, slopeFromPoints, nextSequence, derivativePolynomial],
-    data: [meanSeries, conditionalProbability, independentEvents]
+    energy: [proportionValue, ratioShare, fractionCalculation, operationPriority, scientificNotation, powerRule, percentFinal, percentRate, successiveRates, percentInitial, reciprocalRate, metricConversion, durationConversion, functionImage],
+    factory: [zeroProduct, developExpression, slopeFromPoints, nextSequence, derivativePolynomial, setIntersection, logicalCondition, reciprocalStatement, counterexample, factorExpression, linearSign, factorizedSign, graphLineEquation, graphEquationReading, graphSign, quadraticVertex, quadraticRoots, variationTable, explicitSequenceTerm, recurrentSequenceTerm, sequenceNature, sequenceVariation, cubicDerivative, tangentEquation, derivativeVariation],
+    data: [meanSeries, conditionalProbability, independentEvents, histogramReading, meanPoint, affineAdjustment, totalProbability, bernoulliRepetition, randomExpectation, randomEvent, pythonAccumulator, pythonList, pythonFunction, spreadsheetFormula, dataFilter, pythonBernoulli, rawDataCrossTable]
   };
 
   const SKILL_GENERATORS = {
     proportions: [proportionValue, ratioShare],
-    evolutions: [percentFinal, percentRate, successiveRates],
+    numeric: [fractionCalculation, operationPriority, scientificNotation, powerRule],
+    evolutions: [percentFinal, percentRate, successiveRates, percentInitial, reciprocalRate],
     units: [metricConversion, durationConversion],
-    algebra: [zeroProduct, developExpression],
-    functions: [slopeFromPoints, functionImage],
-    sequences: [nextSequence],
-    derivatives: [derivativePolynomial],
-    statistics: [meanSeries],
-    probability: [conditionalProbability, independentEvents]
+    logic: [setIntersection, logicalCondition, reciprocalStatement, counterexample],
+    algebra: [zeroProduct, developExpression, factorExpression, linearSign, factorizedSign],
+    functions: [slopeFromPoints, functionImage, graphLineEquation, graphEquationReading, graphSign, quadraticVertex, quadraticRoots, variationTable],
+    sequences: [nextSequence, explicitSequenceTerm, recurrentSequenceTerm, sequenceNature, sequenceVariation],
+    derivatives: [derivativePolynomial, cubicDerivative, tangentEquation, derivativeVariation],
+    statistics: [meanSeries, histogramReading, meanPoint, affineAdjustment],
+    probability: [conditionalProbability, independentEvents, totalProbability, bernoulliRepetition, randomExpectation, randomEvent],
+    algorithmics: [pythonAccumulator, pythonList, pythonFunction, spreadsheetFormula, dataFilter, pythonBernoulli, rawDataCrossTable]
   };
+
+  const PROGRAMME_2026 = [
+    {
+      id: "automatismes",
+      title: "Automatismes et calcul",
+      capabilities: [
+        { label: "Proportionnalité, conversions et rapport de quantités", origin: "Rappel de seconde 2026", skills: ["proportions", "units"], kinds: ["direct-proportion", "ratio-comparison", "metric-conversion", "duration-conversion"] },
+        { label: "Fractions et priorités opératoires", origin: "Rappel de seconde 2026", skills: ["numeric"], kinds: ["fraction-calculation", "operation-priority"] },
+        { label: "Puissances et notation scientifique", origin: "Rappel de seconde 2026", skills: ["numeric"], kinds: ["power-rule", "scientific-notation"] },
+        { label: "Valeur finale, initiale et taux d'évolution", skills: ["evolutions"], kinds: ["percent-final", "percent-initial", "percent-rate"] },
+        { label: "Évolutions successives et réciproques", skills: ["evolutions"], kinds: ["successive-rates", "reciprocal-rate"] },
+        { label: "Développer, factoriser et réduire", skills: ["algebra"], kinds: ["develop-expression", "factor-expression"] },
+        { label: "Produit nul et signes d'expressions", skills: ["algebra"], kinds: ["zero-product", "linear-sign", "factorized-sign"] },
+        { label: "Droites, équations, signes et variations graphiques", skills: ["functions"], kinds: ["graph-line-equation", "graph-equation-reading", "graph-sign-reading", "variation-reading"] },
+        { label: "Indicateurs et représentations statistiques", skills: ["statistics"], kinds: ["series-mean", "histogram-reading"] },
+        { label: "Probabilités conditionnelles sur tableau", skills: ["probability"], kinds: ["conditional-table"] }
+      ]
+    },
+    {
+      id: "logic",
+      title: "Ensembles et logique",
+      capabilities: [
+        { label: "Intersection, réunion, appartenance et cardinal", skills: ["logic"], kinds: ["set-intersection"] },
+        { label: "Connecteurs ET et OU", skills: ["logic"], kinds: ["logical-condition"] },
+        { label: "Proposition réciproque et contraposée", skills: ["logic"], kinds: ["statement-reciprocal"] },
+        { label: "Contre-exemple", skills: ["logic"], kinds: ["counterexample"] }
+      ]
+    },
+    {
+      id: "algorithmics",
+      title: "Algorithmique, Python et tableur",
+      capabilities: [
+        { label: "Compteur et accumulateur", skills: ["algorithmics"], kinds: ["python-accumulator"] },
+        { label: "Fonctions : entrées et sorties", skills: ["algorithmics"], kinds: ["python-function"] },
+        { label: "Générer, filtrer et parcourir des listes", skills: ["algorithmics"], kinds: ["python-list", "data-filter"] },
+        { label: "Simuler une loi de Bernoulli", skills: ["algorithmics"], kinds: ["python-bernoulli"] },
+        { label: "Formules de tableur", skills: ["algorithmics"], kinds: ["spreadsheet-formula"] },
+        { label: "Sélectionner et croiser des données", skills: ["algorithmics"], kinds: ["raw-data-cross-table"] }
+      ]
+    },
+    {
+      id: "analysis",
+      title: "Suites, fonctions et dérivation",
+      capabilities: [
+        { label: "Suites explicites et définies par récurrence", skills: ["sequences"], kinds: ["explicit-sequence-term", "recurrent-sequence-term"] },
+        { label: "Reconnaître un modèle arithmétique ou géométrique", skills: ["sequences"], kinds: ["arithmetic-sequence", "geometric-sequence", "sequence-nature"] },
+        { label: "Sens de variation d'une suite", skills: ["sequences"], kinds: ["sequence-variation"] },
+        { label: "Images et taux de variation", skills: ["functions"], kinds: ["affine-image", "line-slope"] },
+        { label: "Sommet, racines et forme factorisée d'un degré 2", skills: ["functions"], kinds: ["quadratic-vertex", "quadratic-roots"] },
+        { label: "Dérivée d'un polynôme de degré au plus 3", skills: ["derivatives"], kinds: ["polynomial-derivative", "cubic-derivative"] },
+        { label: "Tangente, signe de la dérivée et variations", skills: ["derivatives"], kinds: ["tangent-equation", "derivative-variation"] }
+      ]
+    },
+    {
+      id: "statistics",
+      title: "Statistiques à deux variables",
+      capabilities: [
+        { label: "Point moyen d'un nuage", skills: ["statistics"], kinds: ["bivariate-mean-point"] },
+        { label: "Déterminer et utiliser un ajustement affine", skills: ["statistics"], kinds: ["affine-adjustment"] },
+        { label: "Interpolation et extrapolation", skills: ["statistics"], kinds: ["affine-adjustment"] }
+      ]
+    },
+    {
+      id: "probability",
+      title: "Probabilités et variables aléatoires",
+      capabilities: [
+        { label: "Indépendance et formule des probabilités totales", skills: ["probability"], kinds: ["independent-events", "total-probability"] },
+        { label: "Répétitions indépendantes de Bernoulli", skills: ["probability"], kinds: ["bernoulli-repetition"] },
+        { label: "Événements liés à une variable aléatoire", skills: ["probability"], kinds: ["random-event"] },
+        { label: "Loi discrète et espérance", skills: ["probability"], kinds: ["random-expectation"] }
+      ]
+    }
+  ];
 
   function selectGenerated(generators, mastery, rng, exclusions) {
     const excludedKeys = new Set(exclusions.keys || []);
@@ -504,5 +1401,5 @@
     return selectGenerated(generators.length ? generators : SKILL_GENERATORS.proportions, mastery, rng, exclusions);
   }
 
-  return { SKILLS, GENERATORS, SKILL_GENERATORS, generate, generateForSkills, fingerprint, canonicalChoice, validateQuestion, affineExpression, linearFactor, formatNumber };
+  return { SKILLS, GENERATORS, SKILL_GENERATORS, PROGRAMME_2026, generate, generateForSkills, fingerprint, canonicalChoice, validateQuestion, affineExpression, linearFactor, formatNumber };
 });

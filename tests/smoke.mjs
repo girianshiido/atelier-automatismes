@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import engine from "../question-engine.js";
 
 const worlds = ["energy", "factory", "data"];
+let validatedQuestions = 0;
 
 for (const world of worlds) {
   for (let i = 0; i < 500; i += 1) {
     const question = engine.generate(world, {});
     assert.ok(engine.validateQuestion(question).valid, `${world}: ${engine.validateQuestion(question).errors.join(", ")}`);
+    validatedQuestions += 1;
     assert.ok(question.prompt.length > 10, `${world}: énoncé manquant`);
     assert.equal(question.choices.length, 4, `${world}: quatre choix attendus`);
     assert.equal(new Set(question.choices.map(engine.canonicalChoice)).size, 4, `${world}: choix équivalents`);
@@ -19,8 +21,14 @@ for (const world of worlds) {
 
 assert.equal(engine.affineExpression(-2, 0), "-2x", "le terme constant nul doit être omis");
 assert.equal(engine.affineExpression(3, 5), "3x + 5", "le terme constant non nul doit rester visible");
+assert.equal(engine.affineExpression(1, -2), "x − 2", "le coefficient 1 ne doit pas être affiché devant x");
+assert.equal(engine.affineExpression(-1, 0), "−x", "le coefficient -1 doit être écrit avec un simple signe moins");
 assert.equal(engine.linearFactor(0), "x", "le facteur x + 0 doit être simplifié en x");
 assert.equal(engine.linearFactor(5), "(x + 5)", "un facteur non nul doit rester entre parenthèses");
+assert.equal(engine.canonicalChoice("1/2"), engine.canonicalChoice("2/4"), "les fractions équivalentes doivent être reconnues");
+const ratioQuestion = engine.SKILL_GENERATORS.proportions[1](Math.random);
+assert.equal(ratioQuestion.kind, "ratio-comparison", "le ratio doit comparer deux quantités comme dans le programme de seconde 2026");
+assert.doesNotMatch(ratioQuestion.prompt, /partag/i, "le jeu ne doit pas élargir le ratio à un partage non explicité dans la capacité officielle");
 
 const affineRandomValues = [0, 0.5, 0.5];
 const affineWithZero = engine.SKILL_GENERATORS.functions[1](() => affineRandomValues.shift() ?? 0.5);
@@ -95,10 +103,34 @@ for (let i = 0; i < 500; i += 1) {
 for (const skill of Object.keys(engine.SKILL_GENERATORS)) {
   for (let i = 0; i < 200; i += 1) {
     const question = engine.generateForSkills([skill], {});
+    validatedQuestions += 1;
     assert.equal(question.skill, skill, `${skill}: la question doit venir de la notion achetée`);
     assert.equal(question.choices.length, 4, `${skill}: quatre choix attendus`);
     assert.equal(new Set(question.choices.map(engine.canonicalChoice)).size, 4, `${skill}: choix équivalents`);
   }
 }
 
-console.log("3300 questions générées et validées.");
+const generatedKinds = new Set();
+for (const [skill, generators] of Object.entries(engine.SKILL_GENERATORS)) {
+  for (const generator of generators) {
+    for (let i = 0; i < 100; i += 1) {
+      const question = generator(Math.random);
+      const validation = engine.validateQuestion(question);
+      assert.ok(validation.valid, `${question.kind}: ${validation.errors.join(", ")}`);
+      assert.equal(question.skill, skill, `${question.kind}: atelier incorrect`);
+      generatedKinds.add(question.kind);
+      validatedQuestions += 1;
+    }
+  }
+}
+
+assert.equal(engine.PROGRAMME_2026.length, 6, "six ensembles de capacités officielles sont attendus");
+const capabilities = engine.PROGRAMME_2026.flatMap(section => section.capabilities);
+assert.ok(capabilities.length >= 30, "la grille doit détailler les capacités du programme");
+for (const capability of capabilities) {
+  assert.ok(capability.skills.every(skill => engine.SKILLS[skill]), `${capability.label}: atelier inconnu`);
+  assert.ok(capability.kinds.every(kind => generatedKinds.has(kind)), `${capability.label}: format non généré`);
+}
+assert.ok(!JSON.stringify(engine.PROGRAMME_2026).includes("STD2A"), "la géométrie spécifique à STD2A ne doit pas entrer dans les générateurs STI2D");
+
+console.log(`${validatedQuestions} questions générées et validées dans 56 formats.`);

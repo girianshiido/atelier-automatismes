@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import model from "../game-model.js";
 
-assert.equal(model.WORKSHOPS.length, 9, "neuf ateliers sont attendus");
+assert.equal(model.WORKSHOPS.length, 12, "douze ateliers sont attendus pour couvrir le programme 2026");
 assert.deepEqual(model.WORKSHOPS.map(item => item.id), [
-  "proportions", "evolutions", "units", "algebra", "functions",
-  "sequences", "derivatives", "statistics", "probability"
+  "proportions", "numeric", "evolutions", "units", "logic", "algebra",
+  "functions", "sequences", "derivatives", "statistics", "probability", "algorithmics"
 ]);
 
 for (const workshop of model.WORKSHOPS) {
