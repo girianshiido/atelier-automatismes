@@ -69,6 +69,22 @@ const inclusiveOrQuestion = engine.SKILL_GENERATORS.logic[1](() => 0.9);
 assert.match(inclusiveOrQuestion.prompt, /est-elle fausse et la condition .* vraie/, "la question sur OU doit expliciter les valeurs de vérité attendues");
 assert.doesNotMatch(inclusiveOrQuestion.prompt, /grâce uniquement/, "la formulation ne doit pas suggérer implicitement un OU exclusif");
 
+let intersectionSeed = 987654321;
+const intersectionRandom = () => {
+  intersectionSeed = (1664525 * intersectionSeed + 1013904223) >>> 0;
+  return intersectionSeed / 2 ** 32;
+};
+const intersectionSizes = new Set();
+for (let i = 0; i < 500; i += 1) {
+  const question = engine.SKILL_GENERATORS.logic[0](intersectionRandom);
+  const sets = question.prompt.match(/A = (∅|\{[^}]*\}) et B = (∅|\{[^}]*\})/);
+  assert.ok(sets, "les deux ensembles doivent être lisibles dans l'énoncé");
+  const parseSet = text => text === "∅" ? [] : text.slice(1, -1).split(" ; ").map(Number);
+  const [setA, setB] = [parseSet(sets[1]), parseSet(sets[2])];
+  intersectionSizes.add(setA.filter(value => setB.includes(value)).length);
+}
+assert.deepEqual([...intersectionSizes].sort((a, b) => a - b), [0, 1, 2, 3], "les intersections doivent varier de vide à trois éléments");
+
 const zeroEvolutionValues = [0.9, 0];
 const zeroEvolution = engine.SKILL_GENERATORS.evolutions[2](() => zeroEvolutionValues.shift() ?? 0.5);
 assert.equal(zeroEvolution.choices[zeroEvolution.answer], "Pas d'évolution", "un taux nul doit être formulé sans signe +");

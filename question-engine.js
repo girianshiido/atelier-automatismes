@@ -253,13 +253,14 @@
   }
 
   function setIntersection(rng) {
-    const common = shuffle([1, 2, 3, 4, 5, 6, 7, 8], rng).slice(0, 2).sort((a, b) => a - b);
-    const remaining = [1, 2, 3, 4, 5, 6, 7, 8].filter(value => !common.includes(value));
+    const commonCount = pick([0, 1, 2, 3], rng);
+    const common = shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], rng).slice(0, commonCount).sort((a, b) => a - b);
+    const remaining = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].filter(value => !common.includes(value));
     const onlyA = remaining.slice(0, 2);
     const onlyB = remaining.slice(2, 4);
     const setA = [...common, ...onlyA].sort((a, b) => a - b);
     const setB = [...common, ...onlyB].sort((a, b) => a - b);
-    const writeSet = values => `{${values.join(" ; ")}}`;
+    const writeSet = values => values.length ? `{${values.join(" ; ")}}` : "∅";
     const union = [...new Set([...setA, ...setB])].sort((a, b) => a - b);
     const mode = pick(["intersection", "union", "cardinal"], rng);
     const good = mode === "intersection" ? writeSet(common) : mode === "union" ? writeSet(union) : String(common.length);
@@ -275,7 +276,9 @@
       explanation: mode === "union"
         ? `A ∪ B rassemble tous les éléments appartenant à A ou à B : ${good}.`
         : mode === "cardinal"
-          ? `A ∩ B contient ${common.join(" et ")}, soit ${good} éléments.`
+          ? common.length
+            ? `A ∩ B contient ${common.join(" et ")}, soit ${good} éléments.`
+            : "A ∩ B ne contient aucun élément, donc Card(A ∩ B) = 0."
           : `A ∩ B contient uniquement les éléments communs aux deux ensembles : ${good}.`
     };
   }
